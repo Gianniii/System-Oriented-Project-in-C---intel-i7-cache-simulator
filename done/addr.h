@@ -9,6 +9,7 @@
  */
 
 #include <stdint.h>
+#include <stdint.h>  // for uint##_t types
 
 #define PAGE_OFFSET     12
 #define PAGE_SIZE       4096 // = 2^12 B = 4 kiB pages
@@ -41,21 +42,23 @@
  */
 
 //i wrote this//
-typedef unsigned int word_t
-typedef unsigned char  byte_t
-typedef unsigned int pte_t
+typedef unsigned int word_t;
+typedef unsigned char  byte_t;
+typedef unsigned int pte_t;
 
 typedef struct{
-	unsigned reserved : 16 ;
-	unsigned pgd_entry :  16 ;
-	unsigned pud_entry : 16 ;
-	unsigned pmd_entry : 16 ;
-	unsigned pte_entry :  16 ;
-	unsigned page_offset : 16 ;
+	uint16_t reserved : 16 ;
+	uint16_t pgd_entry :  16 ;
+	uint16_t pud_entry : 16 ;
+	uint16_t pmd_entry : 16 ;
+	uint16_t pte_entry :  16 ;
+	uint16_t page_offset : 16 ;
 } virt_addr_t;
 
 typedef struct{
-	unsigned phy_page_num : 32 ;
-	unsigned page_offset : 16 ;
+	uint32_t phy_page_num : 32 ;
+	uint16_t page_offset : 16 ; //supose to be unint_16 ????
 } phys_addr_t;
+
+
 //////////
