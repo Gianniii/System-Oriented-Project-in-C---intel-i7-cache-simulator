@@ -8,7 +8,6 @@
  * @date 2018-19
  */
 
-#include <stdint.h>
 #include <stdint.h>  // for uint##_t types
 
 #define PAGE_OFFSET     12
@@ -42,23 +41,20 @@
  */
 
 //i wrote this//
-typedef unsigned int word_t;
-typedef unsigned char  byte_t;
-typedef unsigned int pte_t;
+typedef uint32_t word_t;
+typedef uint8_t byte_t;
+typedef uint32_t pte_t;
 
 typedef struct{
-	uint16_t reserved : 16 ;
-	uint16_t pgd_entry :  16 ;
-	uint16_t pud_entry : 16 ;
-	uint16_t pmd_entry : 16 ;
-	uint16_t pte_entry :  16 ;
-	uint16_t page_offset : 16 ;
+	uint16_t reserved : VIRT_ADDR_RES ;
+	uint16_t pgd_entry :  PGD_ENTRY ;
+	uint16_t pud_entry : PUD_ENTRY ;
+	uint16_t pmd_entry : PMD_ENTRY ;
+	uint16_t pte_entry :  PTE_ENTRY ;
+	uint16_t page_offset : PAGE_OFFSET ;
 } virt_addr_t;
 
 typedef struct{
-	uint32_t phy_page_num : 32 ;
-	uint16_t page_offset : 16 ; //supose to be unint_16 ????
+	uint32_t phy_page_num : PHY_PAGE_NUM ;
+	uint16_t page_offset : PAGE_OFFSET ;
 } phys_addr_t;
-
-
-//////////
