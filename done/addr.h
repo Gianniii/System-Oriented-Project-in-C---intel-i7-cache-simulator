@@ -30,17 +30,6 @@
 #define PHY_PAGE_NUM    20
 #define PHY_ADDR        32 // = PHY_PAGE_NUM + PAGE_OFFSET
 
-/* TODO WEEK 04:
- * Définir ici les types
- *      word_t,
- *      byte_t,
- *      pte_t,
- *      virt_addr_t
- *  et phy_addr_t
- * (et supprimer ces huit lignes de commentaire).
- */
-
-//i wrote this//
 typedef uint32_t word_t;
 typedef uint8_t byte_t;
 typedef uint32_t pte_t;
