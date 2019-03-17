@@ -56,3 +56,21 @@ int init_phy_addr(phy_addr_t* paddr, uint32_t page_begin, uint32_t page_offset){
 	paddr->page_offset = page_offset;//he sais page_offset is unit16_t ???
 	return ERR_NONE;
 }
+
+// Helper methods
+
+/**
+ * @Brief Extracts bits from a u_int bitstring from start (included) to stop 
+ * 		  (excluded)
+ * @param sample The bitstring from which to extract
+ * @param start bit index/placeholder from which to clip
+ * @param stop bit index/placeholder till which to clip
+ * @return the right justified extracted u_int bitstring
+ */
+u_int64_t extractBits64(u_int64_t sample, u_int8_t start, u_int8_t stop) {
+    if (start < 0 || stop > 64 || start >= stop) {
+        fprintf(stderr, "Bad Argument given to extractBits64\n");
+        return ERR_BAD_PARAMETER; //TODO How to handle?
+    }
+    return (sample << (64 - stop)) >> (64 - stop + start);
+} 
