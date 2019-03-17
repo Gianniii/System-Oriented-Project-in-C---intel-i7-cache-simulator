@@ -57,4 +57,4 @@ typedef struct{
 typedef struct{
 	uint32_t phy_page_num : PHY_PAGE_NUM ;
 	uint16_t page_offset : PAGE_OFFSET ;
-} phys_addr_t;
+} phy_addr_t;
