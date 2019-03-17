@@ -20,7 +20,13 @@ int print_virtual_address(FILE* where, const virt_addr_t* vaddr){
 }
 
 int init_virt_addr64(virt_addr_t * vaddr, uint64_t vaddr64){
-	
+	return init_virt_addr(vaddr, 
+			extractBits64(vaddr64, 39, 48),
+			extractBits64(vaddr64, 30, 39),
+			extractBits64(vaddr64, 21, 30),
+			extractBits64(vaddr64, 12, 21),
+			extractBits64(vaddr64, 0, 12)
+		);
 }
 
 int init_virt_addr(virt_addr_t * vaddr,

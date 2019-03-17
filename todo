@@ -1,0 +1,3 @@
+Week 4:
+ - Should init_virt_addr() do something with reserved?
+ - Replace constants in init_virt_addr64()
