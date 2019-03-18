@@ -4,30 +4,29 @@
 #include "error.h"
 #include "inttypes.h"
 
+//=========================================================================
+// Helper methods
+//=========================================================================
 
-int print_physical_address(FILE* where, const phy_addr_t* paddr){
-	int nb = fprintf(where,"page num =0x%" PRIX32 "; offset=0x%", paddr->phy_page_num,
-	                 paddr->page_offset);
-	return nb;
+/**
+ * @Brief Extracts bits from a u_int bitstring from start (included) to stop 
+ * 		  (excluded)
+ * @param sample The bitstring from which to extract
+ * @param start bit index/placeholder from which to clip
+ * @param stop bit index/placeholder till which to clip
+ * @return the right justified extracted u_int bitstring
+ */
+u_int64_t extractBits64(u_int64_t sample, u_int8_t start, u_int8_t stop) {
+    if (start < 0 || stop > 64 || start >= stop) {
+        fprintf(stderr, "Bad Argument given to extractBits64\n");
+        return ERR_BAD_PARAMETER; //TODO How to handle?
+    }
+    return (sample << (64 - stop)) >> (64 - stop + start);
 }
 
-int print_virtual_address(FILE* where, const virt_addr_t* vaddr){
-	
-	int nb = fprintf(where, "PGD=0x%" PRIX16 "; PUD=0x%" PRIX16 "; PMD=0x%" PRIX16 "; PTE=0x%" PRIX16
-	               "; offset=0x%" PRIX16, vaddr->pgd_entry, vaddr->pud_entry, vaddr->pmd_entry,
-	               vaddr->pte_entry, vaddr->page_offset);      
-	return nb;
-}
-
-int init_virt_addr64(virt_addr_t * vaddr, uint64_t vaddr64){
-	return init_virt_addr(vaddr, 
-			extractBits64(vaddr64, 39, 48),
-			extractBits64(vaddr64, 30, 39),
-			extractBits64(vaddr64, 21, 30),
-			extractBits64(vaddr64, 12, 21),
-			extractBits64(vaddr64, 0, 12)
-		);
-}
+//=========================================================================
+// "Main" methods - Week 4
+//=========================================================================
 
 int init_virt_addr(virt_addr_t * vaddr,
                    uint16_t pgd_entry,
@@ -50,6 +49,15 @@ int init_virt_addr(virt_addr_t * vaddr,
 	return ERR_NONE;
 }
 
+int init_virt_addr64(virt_addr_t * vaddr, uint64_t vaddr64){
+	return init_virt_addr(vaddr, 
+			extractBits64(vaddr64, 39, 48),
+			extractBits64(vaddr64, 30, 39),
+			extractBits64(vaddr64, 21, 30),
+			extractBits64(vaddr64, 12, 21),
+			extractBits64(vaddr64, 0, 12)
+		);
+}
 
 int init_phy_addr(phy_addr_t* paddr, uint32_t page_begin, uint32_t page_offset){ 
     uint32_t page_num = page_begin >> page_offset;
@@ -63,20 +71,24 @@ int init_phy_addr(phy_addr_t* paddr, uint32_t page_begin, uint32_t page_offset){
 	return ERR_NONE;
 }
 
-// Helper methods
+uint64_t virt_addr_t_to_uint64_t(const virt_addr_t * vaddr) {
+	// TODO
+}
 
-/**
- * @Brief Extracts bits from a u_int bitstring from start (included) to stop 
- * 		  (excluded)
- * @param sample The bitstring from which to extract
- * @param start bit index/placeholder from which to clip
- * @param stop bit index/placeholder till which to clip
- * @return the right justified extracted u_int bitstring
- */
-u_int64_t extractBits64(u_int64_t sample, u_int8_t start, u_int8_t stop) {
-    if (start < 0 || stop > 64 || start >= stop) {
-        fprintf(stderr, "Bad Argument given to extractBits64\n");
-        return ERR_BAD_PARAMETER; //TODO How to handle?
-    }
-    return (sample << (64 - stop)) >> (64 - stop + start);
-} 
+uint64_t virt_addr_t_to_virtual_page_number(const virt_addr_t * vaddr) {
+	// TODO
+}
+
+int print_virtual_address(FILE* where, const virt_addr_t* vaddr){
+	
+	int nb = fprintf(where, "PGD=0x%" PRIX16 "; PUD=0x%" PRIX16 "; PMD=0x%" PRIX16 "; PTE=0x%" PRIX16
+	               "; offset=0x%" PRIX16, vaddr->pgd_entry, vaddr->pud_entry, vaddr->pmd_entry,
+	               vaddr->pte_entry, vaddr->page_offset);      
+	return nb;
+}
+
+int print_physical_address(FILE* where, const phy_addr_t* paddr){
+	int nb = fprintf(where,"page num =0x%" PRIX32 "; offset=0x%", paddr->phy_page_num,
+	                 paddr->page_offset);
+	return nb;
+}
