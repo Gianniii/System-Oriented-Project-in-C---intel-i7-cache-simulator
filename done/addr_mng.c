@@ -18,7 +18,7 @@
  * @param stop bit index/placeholder till which to clip
  * @return the right justified extracted u_int bitstring
  */
-u_int64_t extractBits64(u_int64_t sample, u_int8_t start, u_int8_t stop) {
+u_int64_t extractBits64(u_int64_t sample, const u_int8_t start, const u_int8_t stop) {
     if (start < 0 || stop > 64 || start >= stop) {
         fprintf(stderr, "Bad Argument given to extractBits64\n");
         return ERR_BAD_PARAMETER; //TODO How to handle?
@@ -68,7 +68,7 @@ int init_phy_addr(phy_addr_t* paddr, uint32_t page_begin, uint32_t page_offset){
 	if(page_offset >= (1 << (PAGE_OFFSET + 1))) {return ERR_BAD_PARAMETER;}
 	
 	//assign values to bitfields
-	paddr->phy_page_num = pagenum;
+	paddr->phy_page_num = page_num;
 	paddr->page_offset = page_offset;//he sais page_offset is unit16_t ???
 	return ERR_NONE;
 }
@@ -96,7 +96,7 @@ int print_virtual_address(FILE* where, const virt_addr_t* vaddr){
 }
 
 int print_physical_address(FILE* where, const phy_addr_t* paddr){
-	int nb = fprintf(where,"page num =0x%" PRIX32 "; offset=0x%", paddr->phy_page_num,
+	int nb = fprintf(where,"page num =0x%" PRIX32 "; offset=0x%" PRIX32, paddr->phy_page_num,
 	                 paddr->page_offset);
 	return nb;
 }
