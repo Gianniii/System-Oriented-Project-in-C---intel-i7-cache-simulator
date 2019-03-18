@@ -4,6 +4,8 @@
 #include "error.h"
 #include "inttypes.h"
 
+// Week 4 
+
 //=========================================================================
 // Helper methods
 //=========================================================================
@@ -25,7 +27,7 @@ u_int64_t extractBits64(u_int64_t sample, u_int8_t start, u_int8_t stop) {
 }
 
 //=========================================================================
-// "Main" methods - Week 4
+// "Main" methods
 //=========================================================================
 
 int init_virt_addr(virt_addr_t * vaddr,
@@ -72,11 +74,17 @@ int init_phy_addr(phy_addr_t* paddr, uint32_t page_begin, uint32_t page_offset){
 }
 
 uint64_t virt_addr_t_to_uint64_t(const virt_addr_t * vaddr) {
-	// TODO
+	return virt_addr_t_to_virtual_page_number(vaddr) << PAGE_OFFSET
+			| vaddr->page_offset
+		;
 }
 
 uint64_t virt_addr_t_to_virtual_page_number(const virt_addr_t * vaddr) {
-	// TODO
+	return vaddr->pgd_entry << (PTE_ENTRY + PMD_ENTRY + PUD_ENTRY)
+			| vaddr->pud_entry << (PTE_ENTRY + PMD_ENTRY)
+			| vaddr->pmd_entry << PTE_ENTRY
+			| vaddr->pte_entry
+		;
 }
 
 int print_virtual_address(FILE* where, const virt_addr_t* vaddr){
