@@ -19,7 +19,25 @@
  *      command_t
  *  et program_t
  * (et supprimer ces sept lignes de commentaire).
+ * 
+ * 
  */
+ 
+ typedef enum cwords{Read, Write} command_word_t;
+ 
+ typedef struct{
+	 command_word_t order;  //indique lecture ou écriture
+	 mem_access_t type;     //type d'iformation chercher(instruction ou donnée)
+	 size_t data_size;      //indique taille en cotect des donnée manipuler(mot ou byte)
+	 word_t write_data;     //si necessaire, valeur à écrire
+	 virt_addr_t vaddr;     //addresse virtuelle oue acceder
+ }command_t;
+ 
+ typedef struct{
+	 command_t listing[100]; //contient les commandes
+	 size_t nb_lines;        //nombres de commandes dans listing
+	 size_t allocated;       //sem6
+ }program_t;
 
 /**
  * @brief A useful macro to loop over all program lines.
