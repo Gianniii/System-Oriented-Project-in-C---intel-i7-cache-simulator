@@ -15,7 +15,7 @@ int program_init(program_t* program){
 
 int program_print(FILE* output, const program_t* program){
 	//TODO THIS PRINT DOESNT LINE UP ADDRESSES TO THE LEFT SO DEFINITELY WILL HAVE TO CHANGE THAT
-	//FOR NOW THO LETS JUST SEE IF IT WORKS THOUGH
+	//for now lets just see what it prints then we can tweak it to fit the exactly how its suppose to look like as we test it
 	
 	//make sure output is non_null
 	 if(output == NULL) {
@@ -54,8 +54,6 @@ int program_print(FILE* output, const program_t* program){
 		fprintf(output, " @00000000" "0x%" PRIX16 "0x%" PRIX16 "0x%" PRIX16 "0x%" PRIX16, 
 		        command.vaddr.pgd_entry, command.vaddr.pud_entry, command.vaddr.pmd_entry,
 	             command.vaddr.pte_entry); 
-		
-        
         
         fprintf(output, "\n");
      }
