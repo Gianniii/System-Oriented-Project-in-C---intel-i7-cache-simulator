@@ -23,20 +23,23 @@
  * 
  */
  
- typedef enum cwords{Read, Write} command_word_t;
+ #define SIZE_OF_LISTING 100
+
+enum command_word_type {READ, WRITE};
+typedef enum command_word_type command_word_t;
  
  typedef struct{
-	 command_word_t order;  //indique lecture ou écriture
-	 mem_access_t type;     //type d'iformation chercher(instruction ou donnée)
-	 size_t data_size;      //indique taille en cotect des donnée manipuler(mot ou byte)
+	 command_word_t order;  //indique lecture ou écriture (R, W)
+	 mem_access_t type;     //type d'information chercher(instruction ou donnée)(I ,D)
+	 size_t data_size;      //indique taille en cotect des donnée manipuler(mot ou byte)(B ,W)
 	 word_t write_data;     //si necessaire, valeur à écrire
-	 virt_addr_t vaddr;     //addresse virtuelle oue acceder
+	 virt_addr_t vaddr;     //addresse virtuelle où acceder
  }command_t;
  
  typedef struct{
-	 command_t listing[100]; //contient les commandes
+	 command_t listing[SIZE_OF_LISTING]; //contient les commandes
 	 size_t nb_lines;        //nombres de commandes dans listing
-	 size_t allocated;       //sem6
+	 size_t allocated;       //sem6 -> représentera la taille aloué a listing
  }program_t;
 
 /**
