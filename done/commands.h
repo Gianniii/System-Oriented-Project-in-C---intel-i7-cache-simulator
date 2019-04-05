@@ -13,17 +13,7 @@
 #include <stdio.h> // for size_t, FILE
 #include <stdint.h> // for uint32_t
 
-/* TODO WEEK 05:
- * Définir ici les types
- *      command_word_t
- *      command_t
- *  et program_t
- * (et supprimer ces sept lignes de commentaire).
- * 
- * 
- */
- 
- #define SIZE_OF_LISTING 100
+#define SIZE_OF_LISTING 100
 
 enum command_word_type {READ, WRITE};
 typedef enum command_word_type command_word_t;
@@ -41,6 +31,7 @@ typedef enum command_word_type command_word_t;
 	 size_t nb_lines;        //nombres de commandes dans listing
 	 size_t allocated;       //sem6 -> représentera la taille aloué a listing
  }program_t;
+
 
 /**
  * @brief A useful macro to loop over all program lines.
@@ -60,7 +51,7 @@ typedef enum command_word_type command_word_t;
 /**
  * @brief "Constructor" for program_t: initialize a program.
  * @param program (modified) the program to be initialized.
- * @return ERR_NONE of ok, appropriate error code otherwise.
+ * @return ERR_NONE if ok, appropriate error code otherwise.
  */
 int program_init(program_t* program);
 
@@ -68,14 +59,14 @@ int program_init(program_t* program);
  * @brief add a command (line) to a program. Reallocate memory if necessary.
  * @param program (modified) the program where to add to.
  * @param command the command to be added.
- * @return ERR_NONE of ok, appropriate error code otherwise.
+ * @return ERR_NONE if ok, appropriate error code otherwise.
  */
 int program_add_command(program_t* program, const command_t* command);
 
 /**
  * @brief Tool function to down-reallocate memory to the minimal required size. Typically used once a program will no longer be extended.
  * @param program (modified) the program to be rescaled.
- * @return ERR_NONE of ok, appropriate error code otherwise.
+ * @return ERR_NONE if ok, appropriate error code otherwise.
  */
 int program_shrink(program_t* program);
 
@@ -83,7 +74,7 @@ int program_shrink(program_t* program);
  * @brief Print the content of a program to a stream.
  * @param output the stream to print to.
  * @param program the program to be printed.
- * @return ERR_NONE of ok, appropriate error code otherwise.
+ * @return ERR_NONE if ok, appropriate error code otherwise.
  */
 int program_print(FILE* output, const program_t* program);
 
@@ -91,6 +82,40 @@ int program_print(FILE* output, const program_t* program);
  * @brief Read a program (list of commands) from a file.
  * @param filename the name of the file to read from.
  * @param program the program to be filled from file.
- * @return ERR_NONE of ok, appropriate error code otherwise.
+ * @return ERR_NONE if ok, appropriate error code otherwise.
  */
 int program_read(const char* filename, program_t* program);
+
+/**
+ * @brief "Destructor" for program_t: free its content.
+ * @param program the program to be filled from file.
+ * @return ERR_NONE if ok, appropriate error code otherwise.
+ */
+int program_free(program_t* program);
+
+//MES FONCTIONS AJOUTÉES
+command_t read_command(FILE*);
+
+void handle_write(FILE* input, command_t* command);
+
+void handle_read(FILE* input, command_t* command);
+
+void handle_write(FILE* input, command_t* command);
+
+void handle_instruction(FILE* input, command_t* command);
+
+void handle_data(FILE* input, command_t* command);
+
+void set_vaddr(FILE* input, command_t* command);
+
+uint64_t get_uint64(char c);
+
+void skip_whitespaces(FILE* input);
+
+void handle_read_data(FILE* input, command_t* command);
+
+void handle_write_data(FILE* input, command_t* command);
+
+void set_write_data(FILE* input, command_t* command);
+
+void set_data_size(FILE* input, command_t* command); 
