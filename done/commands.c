@@ -16,12 +16,51 @@ int program_init(program_t* program){
     return ERR_NONE;
 }
 
+int program_free(program_t* program) {
+    M_REQUIRE_NON_NULL(program);
+    M_REQUIRE_NON_NULL(program->listing);
+
+    free(program->listing);
+    program->listing = NULL;
+    program->nb_lines = program->allocated = 0;
+
+    return ERR_NONE;
+}
+
+// Helper method
+int program_resize(program_t* program, size_t to_allocate) {
+    M_REQUIRE_NON_NULL(program);
+    M_REQUIRE_NON_NULL(program->listing);
+
+    M_EXIT_IF_TOO_LONG(to_allocate, SIZE_MAX);
+
+    // TODO @Michael Review stuff below
+    // This is basic.
+    // size_t new_size = to_allocate *sizeof(command_t);
+    // M_EXIT_IF_NULL(program->listing = realloc(program->listing, new_size, new_size);
+
+    // Below is a more "stable" approach
+
+    command_t* const old_listing = program->listing;
+    size_t old_allocated = program->allocated;
+
+    program->allocated = to_allocate;
+    if ((program->listing = realloc(program->listing, program->allocated * sizeof(command_t))) == NULL) {
+        program->listing = old_listing;
+        program->allocated = old_allocated;
+
+        M_EXIT_ERR_NOMSG(ERR_MEM); // The "error" is handled so is this return correct?
+    }
+
+    return ERR_NONE;
+}
+
 int program_print(FILE* output, const program_t* program){
     //make sure output is non_null
     if(output == NULL) {
         return ERR_BAD_PARAMETER;
     }
-    // How about this?
+    // TODO @Michael How about this?
     // M_REQUIRE_NON_NULL(output);
     // M_REQUIRE_NON_NULL(program);
       
