@@ -27,19 +27,23 @@ int program_free(program_t* program) {
     return ERR_NONE;
 }
 
-// Helper method
+/**
+ * @brief Helper method that resizes the listing of the program.
+ * @param program (modified) the program who's listing to resize.
+ * @param to_allocate the desired new size of the listing array.
+ */
 int program_resize(program_t* program, size_t to_allocate) {
     M_REQUIRE_NON_NULL(program);
     M_REQUIRE_NON_NULL(program->listing);
 
     M_EXIT_IF_TOO_LONG(to_allocate, SIZE_MAX);
 
-    // TODO @Michael Review stuff below
-    // This is basic.
+    // TODO @Michael Review this function.
+    // This is a basic way of resizing!
     // size_t new_size = to_allocate *sizeof(command_t);
     // M_EXIT_IF_NULL(program->listing = realloc(program->listing, new_size, new_size);
 
-    // Below is a more "stable" approach
+    // Below is a more "stable" approach!
 
     command_t* const old_listing = program->listing;
     size_t old_allocated = program->allocated;
@@ -114,13 +118,23 @@ int program_print(FILE* output, const program_t* program){
 
 int program_shrink(program_t* program){
     M_REQUIRE_NON_NULL(program);
+    M_REQUIRE_NON_NULL(program->listing);
+
+    if (program->nb_lines <= LISTING_PADDING && program->allocated > LISTING_PADDING) {
+        M_EXIT_IF_ERR(program_resize(program, LISTING_PADDING),
+                "program_resize() failed. Cannot resize listing");
+    } else if (program->nb_lines != program->allocated) {
+        M_EXIT_IF_ERR(program_resize(program, program->nb_lines),
+                "program_resize() failed. Cannot resize listing");
+    }
+
     return ERR_NONE;
 }
 
 int program_add_command(program_t* program, const command_t* command){
-    //TODO: other checks ? 
     M_REQUIRE_NON_NULL(command);
     M_REQUIRE_NON_NULL(program);
+    M_REQUIRE_NON_NULL(program->listing);
     if(command->type == INSTRUCTION) {
         M_REQUIRE(command->data_size == sizeof(word_t), ERR_BAD_PARAMETER,
                   "data size incorrect for an instruction", "");
@@ -135,10 +149,15 @@ int program_add_command(program_t* program, const command_t* command){
                "page_offset must be a multiple of data size", "");
      
     M_REQUIRE(program->nb_lines < SIZE_OF_LISTING - 1, ERR_MEM, "programin listing is full" , "");
-    //add command to the program //ONLY FOR WEEK 5 SINCE LISTING IS STATIC
-    if(program->nb_lines+1 >= SIZE_OF_LISTING) return ERR_MEM;
+
+    // Week 6: Dynamic allocation. Adds the command to our FLA and enlarges listing if its too small.
+    while (program->nb_lines >= program->allocated) {
+        M_EXIT_IF_ERR(program_resize(program, program->allocated * program->allocated), 
+                "program_resize() failed. Cannot resize listing");
+    }
     program->listing[program->nb_lines] = *command;
     ++program->nb_lines;
+
     return ERR_NONE;
 }
 
