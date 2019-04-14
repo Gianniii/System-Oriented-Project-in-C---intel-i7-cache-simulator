@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "addr.h"
 #include "addr_mng.h"	
 #include "error.h"
@@ -36,7 +37,7 @@ int program_resize(program_t* program, size_t to_allocate) {
     M_REQUIRE_NON_NULL(program);
     M_REQUIRE_NON_NULL(program->listing);
 
-    M_EXIT_IF_TOO_LONG(to_allocate, SIZE_MAX);
+    // M_EXIT_IF_TOO_LONG(to_allocate, SIZE_MAX); // @Michael how to test it and why to test this?
 
     // TODO @Michael Review this function.
     // This is a basic way of resizing!
