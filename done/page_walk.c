@@ -13,7 +13,7 @@ int page_walk(const void* mem_space, const virt_addr_t* vaddr, phy_addr_t* paddr
     M_REQUIRE_NON_NULL(vaddr);
     M_REQUIRE_NON_NULL(paddr);
 
-    const pte_t* start = (const pte_t *) mem_space;
+    const pte_t* start = (const pte_t *) mem_space; // TODO cast to const... ?
 
     pte_t pud_start = read_page_entry(start, 0, vaddr->pgd_entry);
     pte_t pmd_start = read_page_entry(start, pud_start, vaddr->pud_entry);
