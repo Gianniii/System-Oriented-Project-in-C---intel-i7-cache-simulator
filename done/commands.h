@@ -14,22 +14,23 @@
 #include <stdint.h> // for uint32_t
 
 #define SIZE_OF_LISTING 100
+#define LISTING_PADDING 10
 
 enum command_word_type {READ, WRITE};
 typedef enum command_word_type command_word_t;
  
  typedef struct{
-	 command_word_t order;  //indique lecture ou écriture (R, W)
-	 mem_access_t type;     //type d'information chercher(instruction ou donnée)(I ,D)
-	 size_t data_size;      //indique taille en cotect des donnée manipuler(mot ou byte)(B ,W)
-	 word_t write_data;     //si necessaire, valeur à écrire
-	 virt_addr_t vaddr;     //addresse virtuelle où acceder
+    command_word_t order;  //indique lecture ou écriture (R, W)
+    mem_access_t type;     //type d'information chercher(instruction ou donnée)(I ,D)
+    size_t data_size;      //indique taille en cotect des donnée manipuler(mot ou byte)(B ,W)
+    word_t write_data;     //si necessaire, valeur à écrire
+    virt_addr_t vaddr;     //addresse virtuelle où acceder
  }command_t;
  
  typedef struct{
-	 command_t listing[SIZE_OF_LISTING]; //contient les commandes
-	 size_t nb_lines;        //nombres de commandes dans listing
-	 size_t allocated;       //sem6 -> représentera la taille aloué a listing
+    command_t* listing;     //contient les commandes
+    size_t nb_lines;        //nombres de commandes dans listing
+    size_t allocated;       //sem6 -> représentera la taille aloué a listing
  }program_t;
 
 
