@@ -16,9 +16,22 @@ CFLAGS = -std=c11 -Wall -Wpedantic -g
 # feel free to update/modifiy this part as you wish
 
 # all those libs are required on Debian, feel free to adapt it to your box
-LDLIBS += -lcheck -lm -lrt -pthread -lsubunit
 
-all:: test-commands
+# Managing make on different OSs
+# From StackOverflow https://stackoverflow.com/questions/714100/os-detecting-makefile
+ifeq ($(OS),Windows_NT)
+    # Shouldn't happen
+else
+    UNAME_S := $(shell uname -s)
+    ifeq ($(UNAME_S),Linux) # LINUX
+        LDLIBS += -lcheck -lm -lrt -pthread -lsubunit 
+    endif
+    ifeq ($(UNAME_S),Darwin) # MACOSX
+				LDLIBS += -lcheck -lm -pthread 
+    endif
+endif
+
+all:: test-addr
 
 addr_mng.o: addr_mng.h addr.h error.h addr_mng.c
 
