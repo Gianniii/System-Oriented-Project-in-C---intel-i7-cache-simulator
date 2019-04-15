@@ -8,7 +8,7 @@ int mem_init_from_dumpfile(const char* filename, void** memory, size_t* mem_capa
     M_REQUIRE_NON_NULL(mem_capacity_in_bytes);
 
     FILE* file = NULL;
-    M_REQUIRE_NON_NULL(file = fopen(filename, "r")); // @Michael Can we put assignments inside of stuff and why does it work?
+    M_REQUIRE_NON_NULL(file = fopen(filename, "r"));
     // @Michael or should this have M_EXIT_ERR_NOMSG(ERR_IO)
 
     // va tout au bout du fichier
@@ -18,6 +18,7 @@ int mem_init_from_dumpfile(const char* filename, void** memory, size_t* mem_capa
     // revient au début du fichier (pour le lire par la suite)
     rewind(file);
 
+    // TODO Make sure file is closed
     M_EXIT_IF_NULL(*memory = calloc(*mem_capacity_in_bytes, 1), *mem_capacity_in_bytes);
 
     // TODO use single function. NO Need to loop!
