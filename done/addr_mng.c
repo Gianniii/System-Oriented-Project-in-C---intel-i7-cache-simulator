@@ -4,6 +4,8 @@
 #include "error.h"
 #include "inttypes.h"
 
+static inline uint64_t extractBits64(uint64_t sample, const uint8_t start, const uint8_t stop);
+
 // Week 4 
 
 //=========================================================================

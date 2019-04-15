@@ -18,12 +18,9 @@ int mem_init_from_dumpfile(const char* filename, void** memory, size_t* mem_capa
     // revient au début du fichier (pour le lire par la suite)
     rewind(file);
 
-    memory = calloc(*mem_capacity_in_bytes, 1); // @Michael do we free this?. Is it 1 or sizeof(void*) ; which equals 8
-    if (memory == NULL) { // @Michael Not using M_EXIT_IF_NULL to reset mem_capacity_in_bytes
-        *mem_capacity_in_bytes = 0;
-        M_EXIT_ERR_NOMSG(ERR_MEM);
-    }
+    M_EXIT_IF_NULL(*memory = calloc(*mem_capacity_in_bytes, 1), *mem_capacity_in_bytes);
 
+    // TODO use single function. NO Need to loop!
     for (size_t i = 0; i < *mem_capacity_in_bytes; i++) {
         memory[i] = getc(file);
     }
