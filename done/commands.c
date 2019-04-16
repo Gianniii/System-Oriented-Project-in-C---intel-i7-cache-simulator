@@ -1,10 +1,9 @@
-#include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
+#include "commands.h"
 #include "addr.h"
 #include "addr_mng.h"	
 #include "error.h"
-#include "inttypes.h"
-#include "commands.h"
 
 static inline int program_resize(program_t* program, size_t to_allocate);
 
@@ -47,13 +46,9 @@ int program_resize(program_t* program, size_t to_allocate) {
 }
 
 int program_print(FILE* output, const program_t* program){
-    //make sure output is non_null
-    if(output == NULL) {
-        return ERR_BAD_PARAMETER;
-    }
-    // TODO @Michael How about this?
-    // M_REQUIRE_NON_NULL(output);
-    // M_REQUIRE_NON_NULL(program);
+    M_REQUIRE_NON_NULL(output);
+    M_REQUIRE_NON_NULL(program);
+    M_REQUIRE_NON_NULL(program->listing);
       
      //fprintf every entry(command) in the listing
      size_t i;
@@ -123,19 +118,19 @@ int program_add_command(program_t* program, const command_t* command){
     M_REQUIRE_NON_NULL(program);
     M_REQUIRE_NON_NULL(program->listing);
     if(command->type == INSTRUCTION) {
-        M_REQUIRE(command->data_size == sizeof(word_t), ERR_BAD_PARAMETER,
-                  "data size incorrect for an instruction", "");
-        M_REQUIRE(command->order == READ, ERR_BAD_PARAMETER, "instruction are read only" , "");
+        M_REQUIRE(command->data_size == sizeof(word_t), ERR_BAD_PARAMETER, "%s", 
+                  "data size incorrect for an instruction");
+        M_REQUIRE(command->order == READ, ERR_BAD_PARAMETER, "%s", "instruction are read only");
     } 
     if(command->type == DATA) {
         M_REQUIRE(command->data_size == sizeof(word_t) || command->data_size == sizeof(char), 
-                  ERR_BAD_PARAMETER, "data_size incorrect for data access", "");
+                  ERR_BAD_PARAMETER, "%s", "data_size incorrect for data access");
     }
 
     M_REQUIRE((command->vaddr.page_offset % command->data_size) == 0, ERR_BAD_PARAMETER,
-               "page_offset must be a multiple of data size", "");
+               "%s", "page_offset must be a multiple of data size");
      
-    M_REQUIRE(program->nb_lines < SIZE_OF_LISTING - 1, ERR_MEM, "programin listing is full" , "");
+    M_REQUIRE(program->nb_lines < SIZE_OF_LISTING - 1, ERR_MEM, "%s", "programin listing is full");
 
     // Week 6: Dynamic allocation. Adds the command to our and enlarges listing if its too small.
     while (program->nb_lines >= program->allocated) {
@@ -179,6 +174,9 @@ command_t read_command(FILE* input){
     } else if(order == 'W') {
         newCommand.order = WRITE;
         handle_write(input, &newCommand);
+    } else {    
+        memset(&newCommand, 0, sizeof(command_t));
+        fprintf(stderr, "read_command() - Invalid argument");
     }
     
     return newCommand;

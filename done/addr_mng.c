@@ -1,8 +1,7 @@
 #include <stdio.h>
-#include "addr.h"
-#include "addr_mng.h"	
+#include <inttypes.h>
+#include "addr_mng.h"
 #include "error.h"
-#include "inttypes.h"
 
 static inline uint64_t extractBits64(uint64_t sample, const uint8_t start, const uint8_t stop);
 
@@ -36,11 +35,11 @@ int init_virt_addr(virt_addr_t * vaddr,
 					   
 	//check arguments
 	M_REQUIRE_NON_NULL(vaddr);
-	M_REQUIRE(pud_entry < (1 << PUD_ENTRY), ERR_BAD_PARAMETER, "Exceeds bitfield", "");
-	M_REQUIRE(pgd_entry < (1 << PGD_ENTRY), ERR_BAD_PARAMETER, "Exceeds bitfield", "");
-	M_REQUIRE(pmd_entry < (1 << PMD_ENTRY), ERR_BAD_PARAMETER, "Exceeds bitfield", "");
-	M_REQUIRE(pte_entry < (1 << PTE_ENTRY), ERR_BAD_PARAMETER, "Exceeds bitfield", "");
-	M_REQUIRE(page_offset < (1 << PAGE_OFFSET), ERR_BAD_PARAMETER, "Exceeds bitfield", "");
+	M_REQUIRE(pud_entry < (1 << PUD_ENTRY), ERR_BAD_PARAMETER, "%s", "Exceeds bitfield");
+	M_REQUIRE(pgd_entry < (1 << PGD_ENTRY), ERR_BAD_PARAMETER, "%s", "Exceeds bitfield");
+	M_REQUIRE(pmd_entry < (1 << PMD_ENTRY), ERR_BAD_PARAMETER, "%s", "Exceeds bitfield");
+	M_REQUIRE(pte_entry < (1 << PTE_ENTRY), ERR_BAD_PARAMETER, "%s", "Exceeds bitfield");
+	M_REQUIRE(page_offset < (1 << PAGE_OFFSET), ERR_BAD_PARAMETER, "%s", "Exceeds bitfield");
 	
 	
 	//assign values to  bitfields
@@ -70,8 +69,8 @@ int init_phy_addr(phy_addr_t* paddr, uint32_t page_begin, uint32_t page_offset){
    
     M_REQUIRE_NON_NULL(paddr);
 	//arguments bitfield size must not be larger then corresponding bitfields
-	M_REQUIRE(page_num < (1 << PHY_PAGE_NUM), ERR_BAD_PARAMETER, "Exceeds bitfield", "");
-	M_REQUIRE(page_offset < (1 << PAGE_OFFSET), ERR_BAD_PARAMETER, "Exceeds bitfield", "");
+	M_REQUIRE(page_num < (1 << PHY_PAGE_NUM), ERR_BAD_PARAMETER, "%s", "Exceeds bitfield");
+	M_REQUIRE(page_offset < (1 << PAGE_OFFSET), ERR_BAD_PARAMETER, "%s", "Exceeds bitfield");
 	
 	//assign values to bitfields
 	paddr->phy_page_num = page_num;
