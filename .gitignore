@@ -3,3 +3,5 @@
 *.vscode
 done/test-commands
 done/test-addr
+
+*.gch
