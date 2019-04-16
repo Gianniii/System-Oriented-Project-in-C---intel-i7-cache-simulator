@@ -24,10 +24,10 @@ ifeq ($(OS),Windows_NT)
 else
     UNAME_S := $(shell uname -s)
     ifeq ($(UNAME_S),Linux) # LINUX
-        LDLIBS += -lcheck -lm -lrt -pthread -lsubunit
+      LDLIBS += -lcheck -lm -lrt -pthread -lsubunit
     endif
     ifeq ($(UNAME_S),Darwin) # MACOSX
-		LDLIBS += -lcheck -lm -pthread
+			LDLIBS += -lcheck -lm -pthread
     endif
 endif
 
@@ -44,7 +44,6 @@ test-addr: test-addr.o addr_mng.o test-addr.o
 
 test-commands.o: test-commands.c commands.h error.h
 test-commands: test-commands.o commands.o error.o addr_mng.o
-
 
 # ----------------------------------------------------------------------
 # This part is to make your life easier. See handouts how to make use of it.

@@ -27,7 +27,7 @@ int mem_init_from_dumpfile(const char* filename, void** memory, size_t* mem_capa
     // TODO Remove
     // // TODO use single function. NO Need to loop!
     // for (size_t i = 0; i < *mem_capacity_in_bytes; i++) {
-    //     memory[i] = getc(file);
+    //     *memory[i] = getc(file);
     // }
 
     if (*mem_capacity_in_bytes != fread(*memory, 1, *mem_capacity_in_bytes, file)) {
