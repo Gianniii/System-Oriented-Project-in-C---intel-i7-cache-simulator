@@ -41,6 +41,7 @@ int program_resize(program_t* program, size_t to_allocate) {
 
     size_t new_size = to_allocate * sizeof(command_t);
     M_EXIT_IF_NULL(program->listing = realloc(program->listing, new_size), new_size); 
+    program->allocated = new_size;
 
     return ERR_NONE;
 }

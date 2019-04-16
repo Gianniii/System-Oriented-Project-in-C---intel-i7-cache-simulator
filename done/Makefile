@@ -43,7 +43,7 @@ test-commands.o: error.h commands.h
 
 test-addr: addr_mng.o test-addr.o
 
-test-commands: commands.o test-commands.o addr_mng.o
+test-commands: commands.o test-commands.o addr_mng.o error.o addr_mng.o 
 
 
 # ----------------------------------------------------------------------
