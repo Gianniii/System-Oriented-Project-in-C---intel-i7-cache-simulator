@@ -4,7 +4,7 @@
 #include "addr_mng.h"
 
 static inline pte_t read_page_entry(const pte_t * start, pte_t page_start, uint16_t index) { 
-    return start[(page_start / 4) + index]; 
+    return start[(page_start / 4) + index];
 }
 
 int page_walk(const void* mem_space, const virt_addr_t* vaddr, phy_addr_t* paddr) {

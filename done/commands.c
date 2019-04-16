@@ -259,6 +259,5 @@ void set_write_data(FILE* input, command_t* command) {
 
 //skip whitespaces if there are 
 void skip_whitespaces(FILE* input){
-    // TODO @Michael what about isspace?
     fscanf(input, " ");
 }

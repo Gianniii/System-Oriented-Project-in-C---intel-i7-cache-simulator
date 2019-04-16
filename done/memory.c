@@ -18,13 +18,25 @@ int mem_init_from_dumpfile(const char* filename, void** memory, size_t* mem_capa
     // revient au début du fichier (pour le lire par la suite)
     rewind(file);
 
-    // TODO Make sure file is closed
-    M_EXIT_IF_NULL(*memory = calloc(*mem_capacity_in_bytes, 1), *mem_capacity_in_bytes);
-
-    // TODO use single function. NO Need to loop!
-    for (size_t i = 0; i < *mem_capacity_in_bytes; i++) {
-        memory[i] = getc(file);
+    if (*memory = calloc(*mem_capacity_in_bytes, 1) == NULL) {
+        fclose(file);
+        M_EXIT_ERR(ERR_MEM, "mem_init_from_dumpfile - Failed to allocate \
+                memory of size %zu bytes", *mem_capacity_in_bytes);
     }
+    
+    // TODO Remove
+    // // TODO use single function. NO Need to loop!
+    // for (size_t i = 0; i < *mem_capacity_in_bytes; i++) {
+    //     memory[i] = getc(file);
+    // }
+
+    if (*mem_capacity_in_bytes != fread(*memory, 1, *mem_capacity_in_bytes, file)) {
+        fclose(file);
+        M_EXIT_ERR(ERR_IO, "mem_init_from_dumpfile - Failed to read memory \
+                contents of size %zu bytes", *mem_capacity_in_bytes);
+    }
+
+    fclose(file);
 
     return ERR_NONE;
 }
