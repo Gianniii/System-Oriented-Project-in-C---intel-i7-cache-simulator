@@ -189,22 +189,36 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
     M_REQUIRE_NON_NULL_CUSTOM_ERR(master_file, ERR_IO);
     if(fscanf(master_file, " %zu ", mem_capacity_in_bytes) != 1) { // TODO how to handle whitespaces
         fclose(master_file);
-        M_EXIT_ERR_NOMSG(ERR_IO);
+        M_EXIT_ERR(ERR_IO, "%s", "mem_init_from_description() read TOTAL MEMORY SIZE failed");
     } 
     if ((*memory = calloc(*mem_capacity_in_bytes, 1)) == NULL) {
-        // TODO Combine both if blocks and maybe free(*memory)
         fclose(master_file);
-        M_EXIT_ERR(ERR_MEM, "mem_init_from_dumpfile - Failed to allocate \
+        M_EXIT_ERR(ERR_MEM, "mem_init_from_description() - Failed to allocate \
                 memory of size %zu bytes", *mem_capacity_in_bytes);
     }
 
-    // TODO Add error checks for all stuff below
     char pgd_filename[FILENAME_MAX];
-    fscanf(master_file, " %s", pgd_filename);
-    page_file_read(pgd_filename, *memory);
+    if(fscanf(master_file, " %s", pgd_filename) != 1) {
+        fclose(master_file);
+        free(*memory);
+        M_EXIT_ERR(ERR_IO, "%s", "mem_init_from_description() read PGD PAGE FILENAME failed");
+    }
+    
+    int err;
+    if((err = page_file_read(pgd_filename, *memory)) != ERR_NONE) {
+        fclose(master_file);
+        free(*memory);
+        M_EXIT_ERR_NOMSG(err);
+    }
     
     size_t n_translation_pages;
-    fscanf(master_file, " %zu", &n_translation_pages);
+    if(fscanf(master_file, " %zu", &n_translation_pages) != 1) {
+        fclose(master_file);
+        free(*memory);
+        M_EXIT_ERR(ERR_IO, "%s", "mem_init_from_description() read PGD PAGE FILENAME failed");
+    }
+
+    // TODO Add error checks for all stuff below
 
     {
         uint32_t index_offset;
@@ -214,7 +228,7 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
             fscanf(master_file, " 0x%"SCNx32, &index_offset);
             fscanf(master_file, " %s", tp_filename);
 
-            page_file_read(tp_filename, *memory + (index_offset * 4));
+            page_file_read(tp_filename, (void*)((char*) *memory + index_offset));
         }
     }
 
