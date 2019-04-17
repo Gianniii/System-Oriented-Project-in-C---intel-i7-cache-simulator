@@ -199,36 +199,39 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
     }
 
     // TODO Add error checks for all stuff below
-    char* pgd_filename;
+    char pgd_filename[FILENAME_MAX];
     fscanf(master_file, " %s", pgd_filename);
     page_file_read(pgd_filename, *memory);
     
     size_t n_translation_pages;
     fscanf(master_file, " %zu", &n_translation_pages);
 
-    for (size_t i = 0; i < n_translation_pages; i++) {
+    {
         uint32_t index_offset;
-        char* tp_filename;
+        char tp_filename[FILENAME_MAX];
+        for (size_t i = 0; i < n_translation_pages; i++) {
 
-        fscanf(master_file, " 0x%"SCNx32, &index_offset);
-        fscanf(master_file, " %s", tp_filename);
+            fscanf(master_file, " 0x%"SCNx32, &index_offset);
+            fscanf(master_file, " %s", tp_filename);
 
-        page_file_read(tp_filename, *memory + (index_offset * 4));
+            page_file_read(tp_filename, *memory + (index_offset * 4));
+        }
     }
 
-    while (!feof(master_file)) {
+    {
         uint64_t vaddr64;
-        char* data_filename;
+        char data_filename[FILENAME_MAX];
+        while (!feof(master_file)) {
+            fscanf(master_file, " 0x%"SCNx64, &vaddr64);
+            fscanf(master_file, " %s ", data_filename);
 
-        fscanf(master_file, " 0x%"SCNx64, &vaddr64);
-        fscanf(master_file, " %s ", data_filename);
+            virt_addr_t vaddr;
+            init_virt_addr64(&vaddr, vaddr64);
 
-        virt_addr_t vaddr;
-        init_virt_addr64(&vaddr, vaddr64);
-
-        phy_addr_t paddr;
-        page_walk(*memory, &vaddr, &paddr);
-        page_file_read(data_filename, (void*)( (((uint64_t) paddr.phy_page_num) << PAGE_OFFSET) | ((uint64_t)paddr.page_offset) ));
+            phy_addr_t paddr;
+            page_walk(*memory, &vaddr, &paddr);
+            page_file_read(data_filename, (void*)( (((uint64_t) paddr.phy_page_num) << PAGE_OFFSET) | ((uint64_t)paddr.page_offset) ));
+        }
     }
 
     return ERR_NONE;

@@ -44,16 +44,13 @@ page_walk.o : page_walk.c commands.h error.h addr_mng.h
 memory.o: memory.c memory.h error.h addr_mng.h util.h error.h
 
 test-addr.o: test-addr.c tests.h util.h addr.h addr_mng.h
-
-test-commands.o: test-commands.c commands.h error.h
-
-test_memory.o: test-memory.c error.h memory.h page_walk.h addr_mng.h util.h
-
 test-addr: test-addr.o addr_mng.o test-addr.o
 
+test-commands.o: test-commands.c commands.h error.h
 test-commands: test-commands.o commands.o error.o addr_mng.o
 
-test-memory:test-memory.c error.o memory.o page_walk.o addr_mng.o util.h
+test_memory.o: test-memory.c error.h memory.h page_walk.h addr_mng.h util.h
+test-memory: test-memory.c error.o memory.o page_walk.o addr_mng.o
 
 # ----------------------------------------------------------------------
 # This part is to make your life easier. See handouts how to make use of it.
