@@ -39,9 +39,9 @@ addr_mng.o: addr_mng.c addr_mng.h error.h addr.h
 
 commands.o: addr.h mem_access.h addr_mng.h error.h commands.h commands.c
 
-page_walk.o : page_walk.c commands.h error.h addr_mng.h
+page_walk.o : page_walk.c commands.h error.h addr_mng.h addr.h
 
-memory.o: memory.c memory.h error.h addr_mng.h util.h error.h
+memory.o: memory.c memory.h error.h addr_mng.h util.h error.h addr.h
 
 test-addr.o: test-addr.c tests.h util.h addr.h addr_mng.h
 test-addr: test-addr.o addr_mng.o test-addr.o
