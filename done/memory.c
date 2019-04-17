@@ -24,6 +24,8 @@
 
 static inline int page_file_read(const char* filename, void* dest);
 
+static inline void* paddr_to_ptr(void* mem_start, phy_addr_t paddr);
+
 // ======================================================================
 /**
  * @brief Tool function to print an address.
@@ -184,18 +186,22 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
     M_REQUIRE_NON_NULL(master_filename);
     M_REQUIRE_NON_NULL(memory);
     M_REQUIRE_NON_NULL(mem_capacity_in_bytes);
+    debug_print("master_filename = %s", master_filename);
 
     FILE* master_file = fopen(master_filename, "r");
     M_REQUIRE_NON_NULL_CUSTOM_ERR(master_file, ERR_IO);
-    if(fscanf(master_file, " %zu ", mem_capacity_in_bytes) != 1) { // TODO how to handle whitespaces
+    if(fscanf(master_file, " %zu", mem_capacity_in_bytes) != 1) { // TODO how to handle whitespaces
         fclose(master_file);
         M_EXIT_ERR(ERR_IO, "%s", "mem_init_from_description() read TOTAL MEMORY SIZE failed");
-    } 
+    }
+    debug_print("*mem_capacity_in_bytes = %zu", *mem_capacity_in_bytes);
+
     if ((*memory = calloc(*mem_capacity_in_bytes, 1)) == NULL) {
         fclose(master_file);
         M_EXIT_ERR(ERR_MEM, "mem_init_from_description() - Failed to allocate \
                 memory of size %zu bytes", *mem_capacity_in_bytes);
     }
+    debug_print("*memory = %p", *memory);
 
     char pgd_filename[FILENAME_MAX];
     if(fscanf(master_file, " %s", pgd_filename) != 1) {
@@ -203,6 +209,7 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
         free(*memory);
         M_EXIT_ERR(ERR_IO, "%s", "mem_init_from_description() read PGD PAGE FILENAME failed");
     }
+    debug_print("pgd_filename = %s", pgd_filename);
     
     int err;
     if((err = page_file_read(pgd_filename, *memory)) != ERR_NONE) {
@@ -217,6 +224,7 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
         free(*memory);
         M_EXIT_ERR(ERR_IO, "%s", "mem_init_from_description() read PGD PAGE FILENAME failed");
     }
+    debug_print("n_translation_pages = %zu", n_translation_pages);
 
     // TODO Add error checks for all stuff below
 
@@ -227,6 +235,7 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
 
             fscanf(master_file, " 0x%"SCNx32, &index_offset);
             fscanf(master_file, " %s", tp_filename);
+            debug_print("translation_page %zu : index_offset = %x\ttp_filename = %s", i, index_offset, tp_filename);
 
             page_file_read(tp_filename, (void*)((char*) *memory + index_offset));
         }
@@ -235,16 +244,22 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
     {
         uint64_t vaddr64;
         char data_filename[FILENAME_MAX];
+        #ifdef DEBUG
+        size_t debug_counter = 0;
+        #endif
         while (!feof(master_file)) {
             fscanf(master_file, " 0x%"SCNx64, &vaddr64);
-            fscanf(master_file, " %s ", data_filename);
+            fscanf(master_file, " %s", data_filename);
+
+            debug_print("data_page %zu : vaddr64 = %llx\tdata_filename = %s", debug_counter++, vaddr64, data_filename);
 
             virt_addr_t vaddr;
             init_virt_addr64(&vaddr, vaddr64);
 
             phy_addr_t paddr;
             page_walk(*memory, &vaddr, &paddr);
-            page_file_read(data_filename, (void*)( (((uint64_t) paddr.phy_page_num) << PAGE_OFFSET) | ((uint64_t)paddr.page_offset) ));
+
+            page_file_read(data_filename, paddr_to_ptr(*memory, paddr));
         }
     }
 
@@ -261,6 +276,8 @@ static inline int page_file_read(const char* filename, void* dest) {
     FILE* file = fopen(filename, "r");
     M_REQUIRE_NON_NULL_CUSTOM_ERR(file, ERR_IO);
 
+    debug_print("filename= %s\tdest= %p", filename, dest);
+
     if (PAGE_SIZE != fread(dest, 1, PAGE_SIZE, file)) {
         fclose(file);
         M_EXIT_ERR(ERR_IO, "page_file_read - Failed to read memory \
@@ -269,4 +286,12 @@ static inline int page_file_read(const char* filename, void* dest) {
 
     fclose(file);
     return ERR_NONE;
+}
+
+static inline void* paddr_to_ptr(void* mem_start, phy_addr_t paddr) {
+    return  (void*) (
+              ((uint64_t) mem_start) 
+            + (((uint64_t) paddr.phy_page_num) << PAGE_OFFSET)
+            | ((uint64_t)paddr.page_offset)
+        );
 }
