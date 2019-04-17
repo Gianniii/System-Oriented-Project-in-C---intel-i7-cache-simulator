@@ -221,7 +221,7 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
         M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " 0x%"SCNx64" ", &vaddr64) != 1, ERR_IO);
         M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " %s ", target_filename) != 1, ERR_IO);
 
-        debug_print("data_page %zu : vaddr64 = %llx\tdata_filename = %s", debug_counter++, vaddr64, target_filename);
+        debug_print("data_page %zu : vaddr64 = %"SCNx64"\tdata_filename = %s", debug_counter++, vaddr64, target_filename);
 
         virt_addr_t vaddr;
         M_MEMORY_DESC_EXIT_IF((err = init_virt_addr64(&vaddr, vaddr64)) != ERR_NONE, err);

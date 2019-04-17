@@ -31,7 +31,7 @@ else
     endif
 endif
 
-all:: test-memory
+all:: test-memory test-commands test-addr
 
 error.o: error.h error.c
 
