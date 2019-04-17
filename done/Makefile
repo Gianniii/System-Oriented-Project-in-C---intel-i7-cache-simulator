@@ -31,7 +31,7 @@ else
     endif
 endif
 
-all:: test-commands
+all:: test-memory
 
 error.o: error.h error.c
 
@@ -39,11 +39,21 @@ addr_mng.o: addr_mng.c addr_mng.h error.h addr.h
 
 commands.o: addr.h mem_access.h addr_mng.h error.h commands.h commands.c
 
+page_walk.o : page_walk.c commands.h error.h addr_mng.h
+
+memory.o: memory.c memory.h error.h addr_mng.h util.h error.h
+
 test-addr.o: test-addr.c tests.h util.h addr.h addr_mng.h
-test-addr: test-addr.o addr_mng.o test-addr.o
 
 test-commands.o: test-commands.c commands.h error.h
+
+test_memory.o: test-memory.c error.h memory.h page_walk.h addr_mng.h util.h
+
+test-addr: test-addr.o addr_mng.o test-addr.o
+
 test-commands: test-commands.o commands.o error.o addr_mng.o
+
+test-memory:test-memory.c error.o memory.o page_walk.o addr_mng.o util.h
 
 # ----------------------------------------------------------------------
 # This part is to make your life easier. See handouts how to make use of it.

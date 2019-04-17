@@ -93,30 +93,3 @@ int program_read(const char* filename, program_t* program);
  * @return ERR_NONE if ok, appropriate error code otherwise.
  */
 int program_free(program_t* program);
-
-//MES FONCTIONS AJOUTÉES
-command_t read_command(FILE*);
-
-void handle_write(FILE* input, command_t* command);
-
-void handle_read(FILE* input, command_t* command);
-
-void handle_write(FILE* input, command_t* command);
-
-void handle_instruction(FILE* input, command_t* command);
-
-void handle_data(FILE* input, command_t* command);
-
-void set_vaddr(FILE* input, command_t* command);
-
-uint64_t get_uint64(char c);
-
-void skip_whitespaces(FILE* input);
-
-void handle_read_data(FILE* input, command_t* command);
-
-void handle_write_data(FILE* input, command_t* command);
-
-void set_write_data(FILE* input, command_t* command);
-
-void set_data_size(FILE* input, command_t* command); 

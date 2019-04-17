@@ -7,6 +7,29 @@
 
 static inline int program_resize(program_t* program, size_t to_allocate);
 
+static inline command_t read_command(FILE*);
+
+static inline void handle_write(FILE* input, command_t* command);
+
+static inline void handle_read(FILE* input, command_t* command);
+
+static inline void handle_write(FILE* input, command_t* command);
+
+static inline void handle_instruction(FILE* input, command_t* command);
+
+static inline void set_vaddr(FILE* input, command_t* command);
+
+static inline void skip_whitespaces(FILE* input);
+
+static inline void handle_read_data(FILE* input, command_t* command);
+
+static inline void handle_write_data(FILE* input, command_t* command);
+
+static inline void set_write_data(FILE* input, command_t* command);
+
+static inline void set_data_size(FILE* input, command_t* command); 
+
+
 int program_init(program_t* program){
     M_REQUIRE_NON_NULL(program);
 

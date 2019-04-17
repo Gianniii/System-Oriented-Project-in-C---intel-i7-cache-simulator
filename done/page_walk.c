@@ -17,7 +17,7 @@ int page_walk(const void* mem_space, const virt_addr_t* vaddr, phy_addr_t* paddr
     pte_t pud_start = read_page_entry(start, 0, vaddr->pgd_entry);
     pte_t pmd_start = read_page_entry(start, pud_start, vaddr->pud_entry);
     pte_t pte_start = read_page_entry(start, pmd_start, vaddr->pmd_entry);
-    u_int32_t pte_value = read_page_entry(start, pte_start, vaddr->pte_entry);
+    uint32_t pte_value = read_page_entry(start, pte_start, vaddr->pte_entry);
 
     // TODO @Michael Should we mask and OR the bits in Physical page number and offset?
     // And should this be done in addr_mng.c?
