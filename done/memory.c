@@ -7,25 +7,21 @@
 /**
  * @brief Reads contents of the file and puts them at dest.
  * @param filename name of binary file to load. Should contain precicely 4096 bytes.
- * @param dest pointer to the begining for the memory space into which the 4096 bytes should be loaded.
+ * @param dest pointer to the begining for the memory space into which the 
+ *        4096 bytes should be loaded. Should already be initialized!
  */
 static inline int page_file_read(const char* filename, void* dest) {
-    FILE* file = NULL;
-    M_REQUIRE_NON_NULL_CUSTOM_ERR(file = fopen(filename, "r"), ERR_IO);
-
-    if ((dest = calloc(PAGE_SIZE, 1)) == NULL) {
-        fclose(file);
-        M_EXIT_ERR(ERR_MEM, "page_file_read - Failed to allocate \
-                memory of size %zu bytes", *mem_capacity_in_bytes);
-    }
+    FILE* file = fopen(filename, "r");
+    M_REQUIRE_NON_NULL_CUSTOM_ERR(file, ERR_IO);
 
     if (PAGE_SIZE != fread(dest, 1, PAGE_SIZE, file)) {
         fclose(file);
         M_EXIT_ERR(ERR_IO, "page_file_read - Failed to read memory \
-                contents of size %zu bytes", *mem_capacity_in_bytes);
+                contents of size %zu bytes", PAGE_SIZE);
     }
 
-    fclose(file);    
+    fclose(file);
+    return ERR_NONE;
 }
 
 int mem_init_from_dumpfile(const char* filename, void** memory, size_t* mem_capacity_in_bytes) {
@@ -33,8 +29,8 @@ int mem_init_from_dumpfile(const char* filename, void** memory, size_t* mem_capa
     M_REQUIRE_NON_NULL(memory);
     M_REQUIRE_NON_NULL(mem_capacity_in_bytes);
 
-    FILE* file = NULL;
-    M_REQUIRE_NON_NULL_CUSTOM_ERR(file = fopen(filename, "r"), ERR_IO);
+    FILE* file = fopen(filename, "r");
+    M_REQUIRE_NON_NULL_CUSTOM_ERR(file, ERR_IO);
 
     // va tout au bout du fichier
     fseek(file, 0L, SEEK_END);
@@ -44,6 +40,7 @@ int mem_init_from_dumpfile(const char* filename, void** memory, size_t* mem_capa
     rewind(file);
 
     if ((*memory = calloc(*mem_capacity_in_bytes, 1)) == NULL) {
+        // TODO Combine both if blocks and maybe free(*memory)
         fclose(file);
         M_EXIT_ERR(ERR_MEM, "mem_init_from_dumpfile - Failed to allocate \
                 memory of size %zu bytes", *mem_capacity_in_bytes);
@@ -89,10 +86,25 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
     M_REQUIRE_NON_NULL(memory);
     M_REQUIRE_NON_NULL(mem_capacity_in_bytes);
 
-    FILE* master_file = NULL;
-    M_REQUIRE_NON_NULL_CUSTOM_ERR(master_file = fopen(master_filename, "r"), ERR_IO);
+    FILE* master_file = fopen(master_filename, "r");
+    M_REQUIRE_NON_NULL_CUSTOM_ERR(master_file, ERR_IO);
     
-    *mem_capacity_in_bytes = fscanf(master_file, " %zu "); // TODO how to handle whitespaces
+    fscanf(master_file, " %zu ", mem_capacity_in_bytes); // TODO how to handle whitespaces
+
+    if ((*memory = calloc(*mem_capacity_in_bytes, 1)) == NULL) {
+        // TODO Combine both if blocks and maybe free(*memory)
+        fclose(master_file);
+        M_EXIT_ERR(ERR_MEM, "mem_init_from_dumpfile - Failed to allocate \
+                memory of size %zu bytes", *mem_capacity_in_bytes);
+    }
+
+    char* pgd_filename;
+    FILE* pgd_file = NULL;
+
+    // *pgd_filename = fscanf(master_file, )
+    
+    // if((pgd_filename))
+
     // pdgfilename
     size_t n_translation_pages;
     // --
