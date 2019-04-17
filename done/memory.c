@@ -203,7 +203,7 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
     }
     debug_print("*memory = %p", *memory);
 
-    char pgd_filename[FILENAME_MAX];
+    char pgd_filename[FILENAME_MAX]; // TODO Do something with filename tables;
     if(fscanf(master_file, " %s", pgd_filename) != 1) {
         fclose(master_file);
         free(*memory);
@@ -291,7 +291,7 @@ static inline int page_file_read(const char* filename, void* dest) {
 static inline void* paddr_to_ptr(void* mem_start, phy_addr_t paddr) {
     return  (void*) (
               ((uint64_t) mem_start) 
-            + (((uint64_t) paddr.phy_page_num) << PAGE_OFFSET)
-            | ((uint64_t)paddr.page_offset)
+            + ((((uint64_t) paddr.phy_page_num) << PAGE_OFFSET)
+            | ((uint64_t)paddr.page_offset))
         );
 }
