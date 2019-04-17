@@ -25,8 +25,7 @@ int page_walk(const void* mem_space, const virt_addr_t* vaddr, phy_addr_t* paddr
     pte_t pte_start = read_page_entry(start, pmd_start, vaddr->pmd_entry);
     uint32_t pte_value = read_page_entry(start, pte_start, vaddr->pte_entry);
 
-    // TODO Error
-    init_phy_addr(paddr, pte_value, vaddr->page_offset);
+    M_EXIT_IF_ERR(init_phy_addr(paddr, pte_value, vaddr->page_offset), "call to init_phy_addr() failed");
 
     #ifdef DEBUG
     fprintf(stderr, __FILE__ ":%d:%s(): PADDR= ", __LINE__, __func__);

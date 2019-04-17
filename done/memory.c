@@ -160,9 +160,6 @@ int mem_init_from_dumpfile(const char* filename, void** memory, size_t* mem_capa
     return ERR_NONE;
 }
 
-/**
- * @return error code, *p_memory shall be NULL in case of error
- */
 int mem_init_from_description(const char* master_filename, void** memory, size_t* mem_capacity_in_bytes) {
     M_REQUIRE_NON_NULL(master_filename);
     M_REQUIRE_NON_NULL(memory);
@@ -171,7 +168,7 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
 
     FILE* master_file = fopen(master_filename, "r");
     M_REQUIRE_NON_NULL_CUSTOM_ERR(master_file, ERR_IO);
-    if(fscanf(master_file, " %zu", mem_capacity_in_bytes) != 1) {
+    if(fscanf(master_file, " %zu ", mem_capacity_in_bytes) != 1) {
         fclose(master_file);
         M_EXIT_ERR(ERR_IO, "%s", "mem_init_from_description() read TOTAL MEMORY SIZE failed");
     }
@@ -184,6 +181,7 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
     }
     debug_print("*memory = %p", *memory);
 
+    // Macro to exit, close file and free memory if an error is thrown in function call bellow
     #define M_MEMORY_DESC_EXIT_IF(test, err) \
         if (test) { \
             fclose(master_file); \
@@ -192,71 +190,46 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
             M_EXIT_ERR_NOMSG(err); \
         }
 
-    char pgd_filename[FILENAME_MAX]; // TODO Do something with filename tables;
-    M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " %s", pgd_filename) != 1, ERR_IO);
-    // if(fscanf(master_file, " %s", pgd_filename) != 1) {
-    //     fclose(master_file);
-    //     free(*memory);
-    //     *memory = NULL;
-    //     M_EXIT_ERR(ERR_IO, "%s", "mem_init_from_description() read PGD PAGE FILENAME failed");
-    // }
-    debug_print("pgd_filename = %s", pgd_filename);
+    char target_filename[FILENAME_MAX];
+    M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " %s ", target_filename) != 1, ERR_IO);
+    debug_print("pgd_filename = %s", target_filename);
     
     int err;
-    M_MEMORY_DESC_EXIT_IF((err = page_file_read(pgd_filename, *memory)) != ERR_NONE, err);
-    // if((err = page_file_read(pgd_filename, *memory)) != ERR_NONE) {
-    //     fclose(master_file);
-    //     free(*memory);
-    //     *memory = NULL;
-    //     M_EXIT_ERR_NOMSG(err);
-    // }
+    M_MEMORY_DESC_EXIT_IF((err = page_file_read(target_filename, *memory)) != ERR_NONE, err);
+    memset(target_filename, 0, FILENAME_MAX);
     
     size_t n_translation_pages;
-    M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " %zu", &n_translation_pages) != 1, ERR_IO)
-    // if(fscanf(master_file, " %zu", &n_translation_pages) != 1) {
-    //     fclose(master_file);
-    //     free(*memory);
-    //     *memory = NULL;
-    //     M_EXIT_ERR(ERR_IO, "%s", "mem_init_from_description() read PGD PAGE FILENAME failed");
-    // }
+    M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " %zu ", &n_translation_pages) != 1, ERR_IO)
     debug_print("n_translation_pages = %zu", n_translation_pages);
 
-    // TODO Add error checks for all stuff below
-
-    {
+    for (size_t i = 0; i < n_translation_pages; i++) {
         uint32_t index_offset;
-        char tp_filename[FILENAME_MAX];
-        for (size_t i = 0; i < n_translation_pages; i++) {
-            M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " 0x%"SCNx32, &index_offset) != 1, ERR_IO);
-            M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " %s", tp_filename) != 1, ERR_IO);
-            debug_print("translation_page %zu : index_offset = %x\ttp_filename = %s", i, index_offset, tp_filename);
+        M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " 0x%"SCNx32" ", &index_offset) != 1, ERR_IO);
+        M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " %s ", target_filename) != 1, ERR_IO);
+        debug_print("translation_page %zu : index_offset = %x\ttp_filename = %s", i, index_offset, target_filename);
 
-            // Casts are optional, but we use them since void* pointer arithmetic causes warnings at compilation
-            M_MEMORY_DESC_EXIT_IF((err = page_file_read(tp_filename, (void*)((uint64_t)*memory + (uint64_t)index_offset))), err);
-        }
+        // Casts are optional, but we use them since void* pointer arithmetic causes warnings at compilation
+        M_MEMORY_DESC_EXIT_IF((err = page_file_read(target_filename, (void*)((uint64_t)*memory + (uint64_t)index_offset))), err);
+        memset(target_filename, 0, FILENAME_MAX);
     }
-
-    {
+    
+    #ifdef DEBUG
+    size_t debug_counter = 0;
+    #endif
+    while (!feof(master_file)) {
         uint64_t vaddr64;
-        char data_filename[FILENAME_MAX];
-        #ifdef DEBUG
-        size_t debug_counter = 0;
-        #endif
-        while (!feof(master_file)) {
-            fscanf(master_file, " 0x%"SCNx64, &vaddr64);
-            // M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " 0x%"SCNx64, &vaddr64) != 1, ERR_IO);
-            fscanf(master_file, " %s", data_filename);
-            // M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " %s", data_filename) != 1, ERR_IO);
+        M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " 0x%"SCNx64" ", &vaddr64) != 1, ERR_IO);
+        M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " %s ", target_filename) != 1, ERR_IO);
 
-            debug_print("data_page %zu : vaddr64 = %llx\tdata_filename = %s", debug_counter++, vaddr64, data_filename);
+        debug_print("data_page %zu : vaddr64 = %llx\tdata_filename = %s", debug_counter++, vaddr64, target_filename);
 
-            virt_addr_t vaddr;
-            M_MEMORY_DESC_EXIT_IF((err = init_virt_addr64(&vaddr, vaddr64)) != ERR_NONE, err);
-            phy_addr_t paddr;
-            M_MEMORY_DESC_EXIT_IF((err = page_walk(*memory, &vaddr, &paddr)) != ERR_NONE, err);
-            
-            M_MEMORY_DESC_EXIT_IF((err = page_file_read(data_filename, paddr_to_ptr(*memory, paddr))), err);
-        }
+        virt_addr_t vaddr;
+        M_MEMORY_DESC_EXIT_IF((err = init_virt_addr64(&vaddr, vaddr64)) != ERR_NONE, err);
+        phy_addr_t paddr;
+        M_MEMORY_DESC_EXIT_IF((err = page_walk(*memory, &vaddr, &paddr)) != ERR_NONE, err);
+        
+        M_MEMORY_DESC_EXIT_IF((err = page_file_read(target_filename, paddr_to_ptr(*memory, paddr))), err);
+        memset(target_filename, 0, FILENAME_MAX);
     }
 
     return ERR_NONE;
@@ -284,6 +257,9 @@ static inline int page_file_read(const char* filename, void* dest) {
     return ERR_NONE;
 }
 
+/**
+ * @brief Converts our "physical address" to a valid pointer in the "memory"
+ */
 static inline void* paddr_to_ptr(void* mem_start, phy_addr_t paddr) {
     return  (void*) (
               ((uint64_t) mem_start) 
