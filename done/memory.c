@@ -123,26 +123,6 @@ int vmem_page_dump_with_options(const void *mem_space, const virt_addr_t* from,
     return ERR_NONE;
 }
 
-/**
- * @brief Reads contents of the file and puts them at dest.
- * @param filename name of binary file to load. Should contain precicely 4096 bytes.
- * @param dest pointer to the begining for the memory space into which the 
- *        4096 bytes should be loaded. Should already be initialized!
- */
-static inline int page_file_read(const char* filename, void* dest) {
-    FILE* file = fopen(filename, "r");
-    M_REQUIRE_NON_NULL_CUSTOM_ERR(file, ERR_IO);
-
-    if (PAGE_SIZE != fread(dest, 1, PAGE_SIZE, file)) {
-        fclose(file);
-        M_EXIT_ERR(ERR_IO, "page_file_read - Failed to read memory \
-                contents of size %d bytes", PAGE_SIZE); // TODO Maybe redefine PAGE_SIZE
-    }
-
-    fclose(file);
-    return ERR_NONE;
-}
-
 int mem_init_from_dumpfile(const char* filename, void** memory, size_t* mem_capacity_in_bytes) {
     M_REQUIRE_NON_NULL(filename);
     M_REQUIRE_NON_NULL(memory);
@@ -218,26 +198,58 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
                 memory of size %zu bytes", *mem_capacity_in_bytes);
     }
 
-    // TODO Add error checks
+    // TODO Add error checks for all stuff below
     char* pgd_filename;
-    fscanf(master_file, " %s ", pgd_filename);
+    fscanf(master_file, " %s", pgd_filename);
     page_file_read(pgd_filename, *memory);
     
     size_t n_translation_pages;
-    fscanf(master_file, " %zu ", &n_translation_pages);
+    fscanf(master_file, " %zu", &n_translation_pages);
 
     for (size_t i = 0; i < n_translation_pages; i++) {
-        size_t index_offset;
+        uint32_t index_offset;
         char* tp_filename;
 
-        fscanf(master_file, " %zu ", &n_translation_pages);
-        fscanf(master_file, " %s ", tp_filename);
+        fscanf(master_file, " 0x%"SCNx32, &index_offset);
+        fscanf(master_file, " %s", tp_filename);
+
+        page_file_read(tp_filename, *memory + (index_offset * 4));
     }
 
-    // if((pgd_filename))
+    while (!feof(master_file)) {
+        uint64_t vaddr64;
+        char* data_filename;
 
-    // pdgfilename
-    // --
+        fscanf(master_file, " 0x%"SCNx64, &vaddr64);
+        fscanf(master_file, " %s ", data_filename);
 
+        virt_addr_t vaddr;
+        init_virt_addr64(&vaddr, vaddr64);
+
+        phy_addr_t paddr;
+        page_walk(*memory, &vaddr, &paddr);
+        page_file_read(data_filename, (void*)( (((uint64_t) paddr.phy_page_num) << PAGE_OFFSET) | ((uint64_t)paddr.page_offset) ));
+    }
+
+    return ERR_NONE;
+}
+
+/**
+ * @brief Reads contents of the file and puts them at dest.
+ * @param filename name of binary file to load. Should contain precicely 4096 bytes.
+ * @param dest pointer to the begining for the memory space into which the 
+ *        4096 bytes should be loaded. Should already be initialized!
+ */
+static inline int page_file_read(const char* filename, void* dest) {
+    FILE* file = fopen(filename, "r");
+    M_REQUIRE_NON_NULL_CUSTOM_ERR(file, ERR_IO);
+
+    if (PAGE_SIZE != fread(dest, 1, PAGE_SIZE, file)) {
+        fclose(file);
+        M_EXIT_ERR(ERR_IO, "page_file_read - Failed to read memory \
+                contents of size %d bytes", PAGE_SIZE); // TODO Maybe redefine PAGE_SIZE
+    }
+
+    fclose(file);
     return ERR_NONE;
 }
