@@ -22,8 +22,17 @@
 #include <inttypes.h> // for SCNx macros
 #include <assert.h>
 
+/**
+ * @brief Reads contents of the file and puts them at dest.
+ * @param filename name of binary file to load. Should contain precicely 4096 bytes.
+ * @param dest pointer to the begining for the memory space into which the 
+ *        4096 bytes should be loaded. Should already be initialized!
+ */
 static inline int page_file_read(const char* filename, void* dest);
 
+/**
+ * @brief Converts our "physical address" to a valid pointer in the "memory"
+ */
 static inline void* paddr_to_ptr(void* mem_start, phy_addr_t paddr);
 
 // ======================================================================
@@ -166,14 +175,18 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
     M_REQUIRE_NON_NULL(mem_capacity_in_bytes);
     debug_print("master_filename = %s", master_filename);
 
+    // Open the master_file
     FILE* master_file = fopen(master_filename, "r");
     M_REQUIRE_NON_NULL_CUSTOM_ERR(master_file, ERR_IO);
+
+    // Read TOTAL MEMORY SIZE
     if(fscanf(master_file, " %zu ", mem_capacity_in_bytes) != 1) {
         fclose(master_file);
         M_EXIT_ERR(ERR_IO, "%s", "mem_init_from_description() read TOTAL MEMORY SIZE failed");
     }
     debug_print("*mem_capacity_in_bytes = %zu", *mem_capacity_in_bytes);
 
+    // Allocate the memory
     if ((*memory = calloc(*mem_capacity_in_bytes, 1)) == NULL) {
         fclose(master_file);
         M_EXIT_ERR(ERR_MEM, "mem_init_from_description() - Failed to allocate \
@@ -190,18 +203,22 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
             M_EXIT_ERR_NOMSG(err); \
         }
 
+    // Read PGD PAGE FILENAME
     char target_filename[FILENAME_MAX];
     M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " %s ", target_filename) != 1, ERR_IO);
     debug_print("pgd_filename = %s", target_filename);
     
+    // Read and load the PGD_PAGE
     int err;
     M_MEMORY_DESC_EXIT_IF((err = page_file_read(target_filename, *memory)) != ERR_NONE, err);
     memset(target_filename, 0, FILENAME_MAX);
     
+    // Read NUMBER OF TRANSLATION PAGES
     size_t n_translation_pages;
     M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " %zu ", &n_translation_pages) != 1, ERR_IO)
     debug_print("n_translation_pages = %zu", n_translation_pages);
 
+    // Load all translation tables
     for (size_t i = 0; i < n_translation_pages; i++) {
         uint32_t index_offset;
         M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " 0x%"SCNx32" ", &index_offset) != 1, ERR_IO);
@@ -213,9 +230,10 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
         memset(target_filename, 0, FILENAME_MAX);
     }
     
-    #ifdef DEBUG
+    #ifdef DEBUG // Counter used by the loop below to have more coherent debug information
     size_t debug_counter = 0;
     #endif
+    // Load all Data tables
     while (!feof(master_file)) {
         uint64_t vaddr64;
         M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " 0x%"SCNx64" ", &vaddr64) != 1, ERR_IO);
@@ -235,12 +253,6 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
     return ERR_NONE;
 }
 
-/**
- * @brief Reads contents of the file and puts them at dest.
- * @param filename name of binary file to load. Should contain precicely 4096 bytes.
- * @param dest pointer to the begining for the memory space into which the 
- *        4096 bytes should be loaded. Should already be initialized!
- */
 static inline int page_file_read(const char* filename, void* dest) {
     FILE* file = fopen(filename, "r");
     M_REQUIRE_NON_NULL_CUSTOM_ERR(file, ERR_IO);
@@ -257,9 +269,6 @@ static inline int page_file_read(const char* filename, void* dest) {
     return ERR_NONE;
 }
 
-/**
- * @brief Converts our "physical address" to a valid pointer in the "memory"
- */
 static inline void* paddr_to_ptr(void* mem_start, phy_addr_t paddr) {
     return  (void*) (
               ((uint64_t) mem_start) 

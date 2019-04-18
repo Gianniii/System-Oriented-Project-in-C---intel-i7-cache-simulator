@@ -31,7 +31,7 @@ else
     endif
 endif
 
-all:: test-memory test-commands test-addr
+all:: test-memory test-commands
 
 error.o: error.h error.c
 
@@ -42,6 +42,12 @@ commands.o: addr.h mem_access.h addr_mng.h error.h commands.h commands.c
 page_walk.o : page_walk.c commands.h error.h addr_mng.h addr.h
 
 memory.o: memory.c memory.h error.h addr_mng.h util.h error.h addr.h
+
+# tlb_hrchy.o: tlb_hrchy.c tlb_hrchy.h addr.h
+tlb_hrchy.o: tlb_hrchy.h addr.h
+
+# tlb_hrchy_mng.o: tlb_hrchy_mng.c tlb_hrchy_mng.h tlb_hrchy.h mem_access.h addr.h
+tlb_hrchy_mng.o: tlb_hrchy_mng.h tlb_hrchy.h mem_access.h addr.h
 
 test-addr.o: test-addr.c tests.h util.h addr.h addr_mng.h
 test-addr: test-addr.o addr_mng.o test-addr.o
