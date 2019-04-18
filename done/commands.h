@@ -13,7 +13,7 @@
 #include <stdio.h> // for size_t, FILE
 #include <stdint.h> // for uint32_t
 
-#define SIZE_OF_LISTING 100
+//#define SIZE_OF_LISTING 100
 #define LISTING_PADDING 10
 
 enum command_word_type {READ, WRITE};
