@@ -87,11 +87,10 @@ int program_print(FILE* output, const program_t* program){
         if(command.type == INSTRUCTION) {
             //if its an instruction can just print  I + addr;
             fprintf(output, " I");
-            //print_virtual_address(output, &command.vaddr);
             uint64_t addr = virt_addr_t_to_uint64_t(&command.vaddr);
             fprintf(output, " @0x%016" PRIX64, addr);  
             fprintf(output, "\n");
-            continue; //continue on next commant 
+            continue; //continue on next command
         } else {
             fprintf(output, " D");
         }
@@ -101,7 +100,7 @@ int program_print(FILE* output, const program_t* program){
         if(command.data_size == sizeof(char)){
             fprintf(output, "B"); 
         } else {
-            fprintf(output, "W"); //DOES WORD INCLUDE ALL OTHER SIZES OR NEEDA BE POWER OF 2 ??
+            fprintf(output, "W");
         }
         //if its a write output the write data
         if(command.order == WRITE) {
@@ -152,9 +151,7 @@ int program_add_command(program_t* program, const command_t* command){
 
     M_REQUIRE((command->vaddr.page_offset % command->data_size) == 0, ERR_BAD_PARAMETER,
                "%s", "page_offset must be a multiple of data size");
-     
-    M_REQUIRE(program->nb_lines < SIZE_OF_LISTING - 1, ERR_MEM, "%s", "programin listing is full");
-
+               
     // Week 6: Dynamic allocation. Adds the command to our and enlarges listing if its too small.
     while (program->nb_lines >= program->allocated) {
         M_EXIT_IF_ERR(program_resize(program, program->allocated * program->allocated), 
@@ -179,7 +176,7 @@ int program_read(const char* filename, program_t* program){
         skip_whitespaces(input);
         command_t command = read_command(input);
         program_add_command(program, &command);
-        //must also skip after incase there are only white spaces left before the end of the file
+        //skip whitespaces just incase there are white spaces left at the end of the file
         skip_whitespaces(input);
     }
     
@@ -264,11 +261,8 @@ void set_data_size(FILE* input, command_t* command) {
 //assumes next thing to read is is vaddr, and sets in the command
 void set_vaddr(FILE* input, command_t* command){
      skip_whitespaces(input);
-     fgetc(input); //read the @
-     fgetc(input); //read the 0
-     fgetc(input);// read x 
      uint64_t addr = 0;
-     fscanf(input, "%"SCNx64, &addr);
+     fscanf(input, "@0x%"SCNx64, &addr);
      
      init_virt_addr64(&command->vaddr, addr);
 }
