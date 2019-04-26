@@ -21,7 +21,7 @@
 typedef node_t* (*push_back_policy)(list_t, const list_content_t*);
 typedef void (*move_back_policy)(list_t*, node_t*);
 typedef struct {
-	list_t* ll;
+	list_t* ll;  //will containt as the values the indexes of lines in tlb
 	push_back_policy push_back;
 	move_back_policy move_back;
 } replacement_policy_t;

@@ -4,6 +4,7 @@
 #include "addr_mng.h"
 #include "error.h"
 #include "tlb_mng.h"
+#include "page_walk.h"
 
 
 
@@ -14,7 +15,7 @@ int tlb_entry_init( const virt_addr_t * vaddr,
 	M_REQUIRE_NON_NULL(vaddr);
 	M_REQUIRE_NON_NULL(paddr);
 	
-	tlb_entry->tag = virt_addr_t_to_virtual_page_number(vaddr); // extract bits [12,48[
+	tlb_entry->tag = virt_addr_t_to_virtual_page_number(vaddr);
 	tlb_entry->phy_page_num = paddr->phy_page_num;
 	tlb_entry->v = (uint8_t) 1;
 	
@@ -30,9 +31,6 @@ int tlb_flush(tlb_entry_t * tlb) {
 	return ERR_NONE;
 }
 
-
-//IF ALL IT DOES IS UPDATE THE tlb_entry at given index then why do we need LRU here?
-//i dont even have the a replacement policy pointer here ? so that a prob?
 /**
  * @brief Insert an entry to a tlb.
  * Eviction policy is least recently used (LRU). 
@@ -42,7 +40,7 @@ int tlb_flush(tlb_entry_t * tlb) {
  * @param tlb pointer to the TLB
  * @return  error code
  */
- //TODO: if full should evict first element? how do i know if its full though?(last elem != null?) and what do i do with older entry of the line?
+ //TODO: if full should evict first element?. If so how do i know if its full? and what do i do with older entry of the line?
 int tlb_insert( uint32_t line_index,
                 const tlb_entry_t * tlb_entry,
                 tlb_entry_t * tlb) {
@@ -56,17 +54,6 @@ int tlb_insert( uint32_t line_index,
 	return ERR_NONE;
 }
 
-/**
- * @brief Check if a TLB entry exists in the TLB.
- *
- * On hit, return success (1) and update the physical page number passed as the pointer to the function.
- * On miss, return miss (0).
- *
- * @param vaddr pointer to virtual address
- * @param paddr (modified) pointer to physical address
- * @param tlb pointer to the beginning of the tlb
- * @return hit (1) or miss (0)
- */
 int tlb_hit(const virt_addr_t * vaddr,
             phy_addr_t * paddr,
             const tlb_entry_t * tlb,
@@ -103,19 +90,23 @@ int tlb_hit(const virt_addr_t * vaddr,
 	return hit;
 }
 
-/**
- * @brief Ask TLB for the translation.
- *
- * @param mem_space pointer to the memory space
- * @param vaddr pointer to virtual address
- * @param paddr (modified) pointer to physical address (returned from TLB)
- * @param tlb pointer to the beginning of the TLB
- * @param hit_or_miss (modified) hit (1) or miss (0)
- * @return error code
- */
 int tlb_search( const void * mem_space,
                 const virt_addr_t * vaddr,
                 phy_addr_t * paddr,
                 tlb_entry_t * tlb,
                 replacement_policy_t * replacement_policy,
-                int* hit_or_miss);
+                int* hit_or_miss) {
+	int error = ERR_NONE;
+	*hit_or_miss = tlb_hit(vaddr, paddr, tlb, replacement_policy);
+	if(*hit_or_miss == 0) {
+		error = page_walk(mem_space, vaddr, paddr);
+		if(error == ERR_NONE) {
+			tlb_entry_t newEntry;
+			tlb_entry_init(vaddr, paddr, &newEntry);
+			tlb_insert(replacement_policy->ll->front->value, &newEntry, tlb);
+			replacement_policy->move_back(replacement_policy->ll, replacement_policy->ll->front);
+		}
+	}
+	
+	return error;
+}
