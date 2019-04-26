@@ -18,7 +18,7 @@
  */
 
 //i defined this typedef's so could be wrong.
-typedef node_t* (*push_back_policy)(list_t, const list_content_t*);
+typedef node_t* (*push_back_policy)(list_t*, const list_content_t*);
 typedef void (*move_back_policy)(list_t*, node_t*);
 typedef struct {
 	list_t* ll;  //will containt as the values the indexes of lines in tlb

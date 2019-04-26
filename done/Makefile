@@ -10,7 +10,7 @@ CFLAGS = -std=c11 -Wall -Wpedantic -g
 # -Wconversion -Wunreachable-code
 
 # uncomment if you want to add DEBUG flag
-CPPFLAGS += -DDEBUG
+#CPPFLAGS += -DDEBUG
 
 # ----------------------------------------------------------------------
 # feel free to update/modifiy this part as you wish
@@ -31,7 +31,7 @@ else
     endif
 endif
 
-all:: test-memory test-commands test_addr test-tlb_simple
+all:: test-addr test-commands test-memory  test-tlb_simple
 
 error.o: error.h error.c
 
@@ -56,14 +56,16 @@ test-commands.o: test-commands.c commands.h error.h
 test-commands: test-commands.o commands.o error.o addr_mng.o
 
 test_memory.o: test-memory.c error.h memory.h page_walk.h addr_mng.h util.h
-test-memory: test-memory.c error.o memory.o page_walk.o addr_mng.o
+test-memory: test-memory.o error.o memory.o page_walk.o addr_mng.o
 
 
 #TODO finish make for test-tlb_simple
 list.o: list.c list.h error.h
 
-test-tlb_simple.o: list.c error.h util.h addr_mng.h commands.h memory.h list.h tlb.h tlb_mng.h
-test-tlb_simple: test-tlb_simple.c error.o list.o addr_mng.o commands.o memory.o list.o tlb.o tlb_mng.o
+tlb_mng.o : tlb_mng.c tlb.h addr.h list.h addr_mng.h error.h tlb_mng.h page_walk.h util.h
+
+test-tlb_simple.o: test-tlb_simple.c list.h error.h util.h addr_mng.h commands.h memory.h list.h tlb.h tlb_mng.h
+test-tlb_simple: test-tlb_simple.o error.o list.o addr_mng.o commands.o memory.o list.o tlb.h tlb_mng.o page_walk.o
 
 # ----------------------------------------------------------------------
 # This part is to make your life easier. See handouts how to make use of it.

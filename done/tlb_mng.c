@@ -40,7 +40,6 @@ int tlb_flush(tlb_entry_t * tlb) {
  * @param tlb pointer to the TLB
  * @return  error code
  */
- //TODO: if full should evict first element?. If so how do i know if its full? and what do i do with older entry of the line?
 int tlb_insert( uint32_t line_index,
                 const tlb_entry_t * tlb_entry,
                 tlb_entry_t * tlb) {
@@ -62,18 +61,17 @@ int tlb_hit(const virt_addr_t * vaddr,
 	if(vaddr == NULL || paddr == NULL || tlb == NULL || replacement_policy == NULL) {
 		return 0;
 	}
-	
 	uint64_t virt_page_num = virt_addr_t_to_virtual_page_number(vaddr);
-	
+
 	size_t hit_index = 0;
 	size_t i = TLB_LINES - 1;
-	for(i = TLB_LINES - 1; i >= 0; --i) {
-		if(tlb[i].tag == virt_page_num && tlb[i].v == 1) {
+	//puisque size_t est unsigned (dont peu pas faire while(i>=0)
+	for(i = TLB_LINES - 1; i < TLB_LINES; --i) {
+		if(tlb[i].tag == virt_page_num  && tlb[i].v == 1) { //THIS CAUSES SEGMENTATION FAULT!
 			hit = 1; 
 			hit_index = i;
 		}
 	}
-	
 	if(hit) {
 		paddr->page_offset = vaddr->page_offset;
 		paddr->phy_page_num = virt_page_num ;
@@ -98,12 +96,15 @@ int tlb_search( const void * mem_space,
                 int* hit_or_miss) {
 	int error = ERR_NONE;
 	*hit_or_miss = tlb_hit(vaddr, paddr, tlb, replacement_policy);
-	if(*hit_or_miss == 0) {
+	if(*hit_or_miss == 0) { //if its a miss
 		error = page_walk(mem_space, vaddr, paddr);
 		if(error == ERR_NONE) {
-			tlb_entry_t newEntry;
+			//could be somethin wrong here that then causes the print to be segfault
+			tlb_entry_t newEntry; //init new entry, insert it, at correct index(replace least used index) and then move it back
 			tlb_entry_init(vaddr, paddr, &newEntry);
+			//the value of the front is the LRU index so we replace insert the new entry at the index
 			tlb_insert(replacement_policy->ll->front->value, &newEntry, tlb);
+			//we then update the LRU index by moving the front using the replacement policy(ie moving it to the back of the list)
 			replacement_policy->move_back(replacement_policy->ll, replacement_policy->ll->front);
 		}
 	}

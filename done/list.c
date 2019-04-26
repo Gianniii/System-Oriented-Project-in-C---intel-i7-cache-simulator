@@ -32,28 +32,42 @@ void clear_list(list_t* this) {
 node_t* push_back(list_t* this, const list_content_t* value) {
 	//check arguments are valid
 	if(this == NULL || value == NULL) return NULL;
-	
 	//allocated memory for new node
 	node_t* newNode;
 	newNode = calloc(1, sizeof(node_t));
 	if(newNode == NULL) {
 		return NULL;
 	}
-	
-	//rewire the pointers to as to add newNode at the end of the list
 	newNode->value = *value;
-	newNode->next = NULL;
 	newNode->previous = this->back;
-	this->back->next = newNode;
+	newNode->next = NULL;
+	if(is_empty_list(this)){
+		this->front = newNode;
+	} else {
+		//if list was not null can rewire old_last elem so its next points to our new node
+		this->back->next = newNode;
+	}
 	this->back = newNode;
-	
 	return newNode;
 }
 
 void move_back(list_t* this, node_t* n) {
-	n->previous->next = n->next; 
-	push_back(this, &n->value);
-	free(n);
+	//printf("goeshere\n");
+	
+	if(!is_empty_list(this)){
+		//if is not the first element of the list need to remove the node and then place it at the back
+		if(n->previous != NULL) {
+			n->previous->next = n->next; 
+			n->next->previous = n->previous;
+			push_back(this, &n->value);
+			free(n);
+		} else if(n->next != NULL) { //if n is the first element but not the only element
+			this->front = n->next;
+			n->next->previous = NULL;
+			push_back(this, &n->value);
+		}
+		
+	}
 }
 
 /**
@@ -72,12 +86,15 @@ node_t* push_front(list_t* this, const list_content_t* value){
 	if(newNode == NULL) {
 		return NULL;
 	}
-	
-	//rewire the pointers to as to add newNode at the end of the list
 	newNode->value = *value;
-	newNode->next = this->front;
 	newNode->previous = NULL;
-	this->front->previous = newNode;
+	newNode->next = this->front;
+	if(is_empty_list(this)) {
+		this->back = newNode;
+	} else {
+		this->front->previous = newNode;
+	}
+	
 	this->front = newNode;
 	
 	return newNode;
@@ -88,10 +105,12 @@ node_t* push_front(list_t* this, const list_content_t* value){
  * @param this list to remove from
  */
 void pop_back(list_t* this){
-	this->back->previous->next = NULL;
-	node_t* newLast = this->back->previous;
-	free(this->back);
-	this->back = newLast;
+	if(!is_empty_list(this)) {
+		this->back->previous->next = NULL;
+		node_t* newLast = this->back->previous;
+		free(this->back);
+		this->back = newLast;
+	}
 }
 
 /**
@@ -99,10 +118,12 @@ void pop_back(list_t* this){
  * @param this list to remove from
  */
 void pop_front(list_t* this) {
-	this->front->next->previous = NULL;
-	node_t* newFirst = this->front->next;
-	free(this->front);
-	this->front = newFirst;
+	if(!is_empty_list(this)) {
+		this->front->next->previous = NULL;
+		node_t* newFirst = this->front->next;
+		free(this->front);
+		this->front = newFirst;
+	}
 }
 
 /**
@@ -113,10 +134,17 @@ void pop_front(list_t* this) {
  */
 int print_list(FILE* stream, const list_t* this) {
 	int number_printed_characters = 0;
+	int first_interation = 0;
+	fprintf(stream, "(");
 	for_all_nodes(n, this) {
-		number_printed_characters += print_node(stream, n;
+		if(first_interation == 1) {
+			fprintf(stream, ", ");
+		} 
+		//printf("%"PRIX32"\n", n->value); value is way too bit should be between 0 and 127 cuz it represents index ...
+		number_printed_characters += print_node(stream, n->value);
+		first_interation = 1;
 	}
-	
+	fprintf(stream, ")");
 	return number_printed_characters;
 }
 
@@ -128,9 +156,16 @@ int print_list(FILE* stream, const list_t* this) {
  */
 int print_reverse_list(FILE* stream, const list_t* this) {
 	int number_printed_characters = 0;
+	int first_iteration = 0;
+	fprintf(stream, "(");
 	for_all_nodes_reverse(n, this) {
-		number_printed_characters += print_node(stream, n);
+		if(first_iteration == 1) {
+			fprintf(stream, ", ");
+		}
+		number_printed_characters += print_node(stream, n->value);
+		first_iteration = 1;
 	}
+	fprintf(stream, ")");
 	return number_printed_characters;
 }
 
