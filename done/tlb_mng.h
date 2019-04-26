@@ -16,14 +16,14 @@
  * Définir ici le type replacement_policy_t
  * (et supprimer ces quatre lignes de commentaire).
  */
- 
-typedef node_t* (push_back_policy)(list_t, const list_content_t*);
+
+//i defined this typedef's so could be wrong.
+typedef node_t* (*push_back_policy)(list_t, const list_content_t*);
 typedef void (*move_back_policy)(list_t*, node_t*);
- 
 typedef struct {
 	list_t* ll;
-	push_back_policy* push_back;
-	move_back_policy* move_back;
+	push_back_policy push_back;
+	move_back_policy move_back;
 } replacement_policy_t;
 
 //=========================================================================

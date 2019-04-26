@@ -33,6 +33,7 @@ struct list {
     node_t* front;
     node_t* back;
 };
+
 typedef struct list list_t;
 struct node {
     list_content_t value;
