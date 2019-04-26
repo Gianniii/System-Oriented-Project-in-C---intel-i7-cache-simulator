@@ -31,7 +31,7 @@ else
     endif
 endif
 
-all:: test-memory test-commands
+all:: test-memory test-commands test_addr test-tlb_simple
 
 error.o: error.h error.c
 
@@ -57,6 +57,13 @@ test-commands: test-commands.o commands.o error.o addr_mng.o
 
 test_memory.o: test-memory.c error.h memory.h page_walk.h addr_mng.h util.h
 test-memory: test-memory.c error.o memory.o page_walk.o addr_mng.o
+
+
+#TODO finish make for test-tlb_simple
+list.o: list.c list.h error.h
+
+test-tlb_simple.o: list.c error.h util.h addr_mng.h commands.h memory.h list.h tlb.h tlb_mng.h
+test-tlb_simple: test-tlb_simple.c error.o list.o addr_mng.o commands.o memory.o list.o tlb.o tlb_mng.o
 
 # ----------------------------------------------------------------------
 # This part is to make your life easier. See handouts how to make use of it.
