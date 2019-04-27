@@ -60,12 +60,12 @@ void move_back(list_t* this, node_t* n) {
 			n->previous->next = n->next; 
 			n->next->previous = n->previous;
 			push_back(this, &n->value);
-			free(n);
 		} else if(n->next != NULL) { //if n is the first element but not the only element
 			this->front = n->next;
 			n->next->previous = NULL;
 			push_back(this, &n->value);
 		}
+		free(n);
 		
 	}
 }

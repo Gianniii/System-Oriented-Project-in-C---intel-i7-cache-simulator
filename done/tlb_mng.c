@@ -67,16 +67,17 @@ int tlb_hit(const virt_addr_t * vaddr,
 	size_t i = TLB_LINES - 1;
 	//puisque size_t est unsigned (dont peu pas faire while(i>=0)
 	for(i = TLB_LINES - 1; i < TLB_LINES; --i) {
-		if(tlb[i].tag == virt_page_num  && tlb[i].v == 1) { //THIS CAUSES SEGMENTATION FAULT!
+		if(tlb[i].tag == virt_page_num  && tlb[i].v == 1) {
 			hit = 1; 
 			hit_index = i;
 		}
 	}
-	if(hit) {
+	if(hit == 1) {
 		paddr->page_offset = vaddr->page_offset;
-		paddr->phy_page_num = virt_page_num ;
+		paddr->phy_page_num = tlb[hit_index].phy_page_num;
 		size_t i = 0;
-		//find the node at the hit index in the last
+		//find the node at the hit index in the list and move the node 
+		//to the back of the list using the replacement policy
 		node_t* n = replacement_policy->ll->front;
 		for(i = 0; i < hit_index; i++) {
 			n = n->next;
@@ -95,14 +96,16 @@ int tlb_search( const void * mem_space,
                 replacement_policy_t * replacement_policy,
                 int* hit_or_miss) {
 	int error = ERR_NONE;
+	//if its a hit the paddr is set correctly from the TLB
 	*hit_or_miss = tlb_hit(vaddr, paddr, tlb, replacement_policy);
+	//if its a miss use pagewalk to find the padd
 	if(*hit_or_miss == 0) { //if its a miss
 		error = page_walk(mem_space, vaddr, paddr);
 		if(error == ERR_NONE) {
-			//could be somethin wrong here that then causes the print to be segfault
+			//needa think harder about this my mistake is probably here... 
 			tlb_entry_t newEntry; //init new entry, insert it, at correct index(replace least used index) and then move it back
 			tlb_entry_init(vaddr, paddr, &newEntry);
-			//the value of the front is the LRU index so we replace insert the new entry at the index
+			//the value of the front is the LRU index so we insert the new entry at the index(replace least used entry in tlb)
 			tlb_insert(replacement_policy->ll->front->value, &newEntry, tlb);
 			//we then update the LRU index by moving the front using the replacement policy(ie moving it to the back of the list)
 			replacement_policy->move_back(replacement_policy->ll, replacement_policy->ll->front);
