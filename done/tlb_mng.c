@@ -5,6 +5,7 @@
 #include "error.h"
 #include "tlb_mng.h"
 #include "page_walk.h"
+#include <stdlib.h>
 
 
 
@@ -63,7 +64,7 @@ int tlb_hit(const virt_addr_t * vaddr,
 	}
 	uint64_t virt_page_num = virt_addr_t_to_virtual_page_number(vaddr);
 
-	size_t hit_index = 0;
+	uint32_t hit_index = 0;
 	size_t i = TLB_LINES - 1;
 	//puisque size_t est unsigned (dont peu pas faire while(i>=0)
 	for(i = TLB_LINES - 1; i < TLB_LINES; --i) {
@@ -73,19 +74,24 @@ int tlb_hit(const virt_addr_t * vaddr,
 		}
 	}
 	if(hit == 1) {
+		//printf("its a hit\n");
 		paddr->page_offset = vaddr->page_offset;
 		paddr->phy_page_num = tlb[hit_index].phy_page_num;
-		size_t i = 0;
 		//find the node at the hit index in the list and move the node 
 		//to the back of the list using the replacement policy
 		node_t* n = replacement_policy->ll->front;
-		for(i = 0; i < hit_index; i++) {
-			n = n->next;
-			
+		//printf("hit_index %x\n", hit_index);
+		while(n->value != hit_index){
+			//printf("n: value %x\n", n->value);
+			n = n->next;  //segmentation fault is here! seems like list is not correct ...
 		}
+		//printf("n: valueUPonExit %x\n", n->value);
+		//printf("print before\n");
+		//print_list(stdout, replacement_policy->ll);
 		replacement_policy->move_back(replacement_policy->ll, n);
+		//printf("print after successfull print\n");
+		//print_list(stdout, replacement_policy->ll);
 	}
-	
 	return hit;
 }
 
@@ -100,17 +106,23 @@ int tlb_search( const void * mem_space,
 	*hit_or_miss = tlb_hit(vaddr, paddr, tlb, replacement_policy);
 	//if its a miss use pagewalk to find the padd
 	if(*hit_or_miss == 0) { //if its a miss
+		//printf("miss\n\n");
 		error = page_walk(mem_space, vaddr, paddr);
 		if(error == ERR_NONE) {
-			//needa think harder about this my mistake is probably here... 
-			tlb_entry_t newEntry; //init new entry, insert it, at correct index(replace least used index) and then move it back
-			tlb_entry_init(vaddr, paddr, &newEntry);
+			//init new entry, insert it, at correct index(replace least used index) and then update the LRU list
+			tlb_entry_t* newEntry;
+			newEntry = calloc(1, sizeof(tlb_entry_t));
+			if(newEntry == NULL) {
+				error = ERR_MEM;
+			};
+			tlb_entry_init(vaddr, paddr, newEntry);
 			//the value of the front is the LRU index so we insert the new entry at the index(replace least used entry in tlb)
-			tlb_insert(replacement_policy->ll->front->value, &newEntry, tlb);
+			tlb_insert(replacement_policy->ll->front->value, newEntry, tlb);
 			//we then update the LRU index by moving the front using the replacement policy(ie moving it to the back of the list)
 			replacement_policy->move_back(replacement_policy->ll, replacement_policy->ll->front);
 		}
+	} else {
+		//printf("hit\n\n");
 	}
-	
 	return error;
 }

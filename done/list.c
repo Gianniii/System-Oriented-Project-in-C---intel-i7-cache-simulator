@@ -8,8 +8,9 @@
 
 int is_empty_list(const list_t* this){
 	M_REQUIRE_NON_NULL(this);
-	if(this->front == NULL) return 1;
-	if(this->back == NULL) return 1;
+	if(this->front == NULL || this->back == NULL) {
+		return 1;
+	}
 	return 0;
 }
 
@@ -41,10 +42,11 @@ node_t* push_back(list_t* this, const list_content_t* value) {
 	newNode->value = *value;
 	newNode->previous = this->back;
 	newNode->next = NULL;
-	if(is_empty_list(this)){
+	if(is_empty_list(this) == 1){
 		this->front = newNode;
 	} else {
 		//if list was not null can rewire old_last elem so its next points to our new node
+		//printf("newNode->value: %x\n", newNode->value);
 		this->back->next = newNode;
 	}
 	this->back = newNode;
@@ -52,21 +54,19 @@ node_t* push_back(list_t* this, const list_content_t* value) {
 }
 
 void move_back(list_t* this, node_t* n) {
-	//printf("goeshere\n");
-	
+	//remove the node and push back an identical node with the same value;
 	if(!is_empty_list(this)){
 		//if is not the first element of the list need to remove the node and then place it at the back
+		if(n->next == NULL) return; // do nothing if its its the last node
 		if(n->previous != NULL) {
 			n->previous->next = n->next; 
 			n->next->previous = n->previous;
-			push_back(this, &n->value);
-		} else if(n->next != NULL) { //if n is the first element but not the only element
+		} else { //if n is the first element but not the last element
 			this->front = n->next;
 			n->next->previous = NULL;
-			push_back(this, &n->value);
 		}
+		push_back(this, &n->value);
 		free(n);
-		
 	}
 }
 
@@ -106,10 +106,12 @@ node_t* push_front(list_t* this, const list_content_t* value){
  */
 void pop_back(list_t* this){
 	if(!is_empty_list(this)) {
-		this->back->previous->next = NULL;
-		node_t* newLast = this->back->previous;
-		free(this->back);
-		this->back = newLast;
+		if(this->back->previous != NULL) {
+			this->back->previous->next = NULL;
+		}
+		node_t* newLast = this->back->previous;  //create pointer that points to the new last node
+		free(this->back); //delete last node
+		this->back = newLast; //rewire list back to the new last node
 	}
 }
 
@@ -119,7 +121,9 @@ void pop_back(list_t* this){
  */
 void pop_front(list_t* this) {
 	if(!is_empty_list(this)) {
-		this->front->next->previous = NULL;
+		if(this->front->next != NULL) {
+			this->front->next->previous = NULL;
+		}
 		node_t* newFirst = this->front->next;
 		free(this->front);
 		this->front = newFirst;
