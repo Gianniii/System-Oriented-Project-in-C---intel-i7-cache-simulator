@@ -33,9 +33,43 @@
  */
 /* TODO WEEK 09:
  * Définir ici les types :
- *    - l1_itlb_entry_t;
- *    - l1_dtlb_entry_t;
  *    - l2_tlb_entry_t;
  *    - et tlb_t;
- * (et supprimer ces huit lignes de commentaire).
- */
+ * (et supprimer ces huit lignes de commentaire
+ 
+ */ 
+typedef struct {
+	uint32_t tag : VIRT_PAGE_NUM - L1_ITLB_LINES_BITS; //32 bits
+	uint32_t phy_page_num : PHY_PAGE_NUM;
+	uint8_t v: 1;
+} l1_itlb_entry_t;
+
+typedef struct {
+	uint32_t tag : VIRT_PAGE_NUM - L2_ITLB_LINES_BITS; //30 bits
+	uint32_t phy_page_num : PHY_PAGE_NUM;
+	uint8_t v : 1;
+} l2_tlb_entry_t;
+
+typedef l1_itlb_entry_t l1_dtlb_entry_t; //they dont represent the same thing though
+
+typedef enum {L1_ITLB, L1_DTLB, L2_TLB} tlb_t;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
