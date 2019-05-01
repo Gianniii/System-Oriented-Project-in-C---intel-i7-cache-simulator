@@ -8,7 +8,7 @@
 
 int is_empty_list(const list_t* this){
 	M_REQUIRE_NON_NULL(this);
-	if(this->front == NULL || this->back == NULL) {
+	if(this->front == NULL || this->back == NULL) { // TODO && and error checks
 		return 1;
 	}
 	return 0;
@@ -23,9 +23,17 @@ void init_list(list_t* this){
  * @brief clear the whole list (make it empty)
  * @param this list to clear
  */
-void clear_list(list_t* this) {
-	free(this->back);
-	free(this->front);
+void clear_list(list_t* this) { 
+	// TODO should free all nodes in list now
+
+	node_t* curr = this->front;
+	node_t* next;
+	while (curr != NULL) {
+		next = curr->next;
+		free(curr);
+		curr = next;
+	}
+
 	init_list(this);
 }
 
@@ -53,7 +61,7 @@ node_t* push_back(list_t* this, const list_content_t* value) {
 	return newNode;
 }
 
-void move_back(list_t* this, node_t* n) {
+void move_back(list_t* this, node_t* n) { // TODO Review
 	//remove the node and push back an identical node with the same value;
 	if(!is_empty_list(this)){
 		//if is not the first element of the list need to remove the node and then place it at the back
