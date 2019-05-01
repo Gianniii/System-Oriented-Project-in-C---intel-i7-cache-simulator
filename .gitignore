@@ -8,3 +8,5 @@ done/test-addr
 
 done/test-memory
 done/test-memory\.dSYM/
+
+done/test-tlb_simple
