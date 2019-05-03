@@ -31,13 +31,6 @@
 /**
  * L1 ITLB, L1 DTLB, and L2 TLB are all direct-mapped.
  */
-/* TODO WEEK 09:
- * Définir ici les types :
- *    - l2_tlb_entry_t;
- *    - et tlb_t;
- * (et supprimer ces huit lignes de commentaire
- 
- */ 
 typedef struct {
 	uint32_t tag : VIRT_PAGE_NUM - L1_ITLB_LINES_BITS; //32 bits
 	uint32_t phy_page_num : PHY_PAGE_NUM;
@@ -45,7 +38,7 @@ typedef struct {
 } l1_itlb_entry_t;
 
 typedef struct {
-	uint32_t tag : VIRT_PAGE_NUM - L2_ITLB_LINES_BITS; //30 bits
+	uint32_t tag : VIRT_PAGE_NUM - L2_TLB_LINES_BITS; //30 bits
 	uint32_t phy_page_num : PHY_PAGE_NUM;
 	uint8_t v : 1;
 } l2_tlb_entry_t;
