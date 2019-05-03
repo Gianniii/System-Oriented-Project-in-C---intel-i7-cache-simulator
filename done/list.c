@@ -4,7 +4,7 @@
 #include "util.h" // for SIZE_T_FMT
 #include "error.h"
 
-
+// TODO Remove documentation from .h prototyped functions
 
 int is_empty_list(const list_t* this){
 	M_REQUIRE_NON_NULL(this);
@@ -74,7 +74,7 @@ void move_back(list_t* this, node_t* n) { // TODO Review
 			n->next->previous = NULL;
 		}
 		push_back(this, &n->value);
-		free(n);
+		free(n); // TODO n is the pointer to the node to be moved. it shouldnt be freed
 	}
 }
 
