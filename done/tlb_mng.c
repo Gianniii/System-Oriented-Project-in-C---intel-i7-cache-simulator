@@ -66,7 +66,7 @@ int tlb_hit(const virt_addr_t * vaddr,
 
 	uint32_t hit_index = 0;
 	size_t i = TLB_LINES - 1;
-	//puisque size_t est unsigned (dont peu pas faire while(i>=0)
+	//size_t est unsigned (donc peu pas faire while(i>=0)
 	for(i = TLB_LINES - 1; i < TLB_LINES; --i) {
 		if(tlb[i].tag == virt_page_num  && tlb[i].v == 1) {
 			hit = 1; 
@@ -74,23 +74,15 @@ int tlb_hit(const virt_addr_t * vaddr,
 		}
 	}
 	if(hit == 1) {
-		//printf("its a hit\n");
 		paddr->page_offset = vaddr->page_offset;
 		paddr->phy_page_num = tlb[hit_index].phy_page_num;
 		//find the node at the hit index in the list and move the node 
 		//to the back of the list using the replacement policy
 		node_t* n = replacement_policy->ll->front;
-		//printf("hit_index %x\n", hit_index);
 		while(n->value != hit_index){
-			//printf("n: value %x\n", n->value);
-			n = n->next;  //segmentation fault is here! seems like list is not correct ...
+			n = n->next; 
 		}
-		//printf("n: valueUPonExit %x\n", n->value);
-		//printf("print before\n");
-		//print_list(stdout, replacement_policy->ll);
 		replacement_policy->move_back(replacement_policy->ll, n);
-		//printf("print after successfull print\n");
-		//print_list(stdout, replacement_policy->ll);
 	}
 	return hit;
 }
@@ -106,7 +98,6 @@ int tlb_search( const void * mem_space,
 	*hit_or_miss = tlb_hit(vaddr, paddr, tlb, replacement_policy);
 	//if its a miss use pagewalk to find the padd
 	if(*hit_or_miss == 0) { //if its a miss
-		//printf("miss\n\n");
 		error = page_walk(mem_space, vaddr, paddr);
 		if(error == ERR_NONE) {
 			//init new entry, insert it, at correct index(replace least used index) and then update the LRU list
@@ -121,8 +112,6 @@ int tlb_search( const void * mem_space,
 			//we then update the LRU index by moving the front using the replacement policy(ie moving it to the back of the list)
 			replacement_policy->move_back(replacement_policy->ll, replacement_policy->ll->front);
 		}
-	} else {
-		//printf("hit\n\n");
 	}
 	return error;
 }

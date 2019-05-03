@@ -46,7 +46,6 @@ node_t* push_back(list_t* this, const list_content_t* value) {
 		this->front = newNode;
 	} else {
 		//if list was not null can rewire old_last elem so its next points to our new node
-		//printf("newNode->value: %x\n", newNode->value);
 		this->back->next = newNode;
 	}
 	this->back = newNode;
@@ -144,7 +143,6 @@ int print_list(FILE* stream, const list_t* this) {
 		if(first_interation == 1) {
 			fprintf(stream, ", ");
 		} 
-		//printf("%"PRIX32"\n", n->value); value is way too bit should be between 0 and 127 cuz it represents index ...
 		number_printed_characters += print_node(stream, n->value);
 		first_interation = 1;
 	}
