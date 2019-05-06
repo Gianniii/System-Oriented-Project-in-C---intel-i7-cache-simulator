@@ -8,5 +8,7 @@
  * @date 2018-19
  */
 
-enum mem_access_type { INSTRUCTION, DATA };
-typedef enum mem_access_type mem_access_t;
+// enum mem_access_type { INSTRUCTION, DATA };
+// typedef enum mem_access_type mem_access_t;
+
+typedef enum { INSTRUCTION, DATA } mem_access_t; // TODO is this okay? (according to enoncé)
