@@ -5,15 +5,6 @@
 #include "tlb.h"
 
 
-/**
- * @brief Initialize a TLB entry
- * @param vaddr pointer to virtual address, to extract tlb tag
- * @param paddr pointer to physical address, to extract physical page number
- * @param tlb_entry pointer to the entry to be initialized
- * @param tlb_type to distinguish between different TLBs
- * @return  error code
- */
-
 int tlb_entry_init( const virt_addr_t * vaddr,
                     const phy_addr_t * paddr,
                     void * tlb_entry,
@@ -84,7 +75,7 @@ int tlb_insert( uint32_t line_index,
 	if(tlb_type == L1_ITLB) {
 		l1_itlb_entry_t* c_tlb = (l1_itlb_entry_t*)tlb;
 		const l1_itlb_entry_t* c_tlb_entry = (const l1_itlb_entry_t*) tlb_entry;
-		c_tlb[line_index].tag = c_tlb_entry ->tag;
+		c_tlb[line_index].tag = c_tlb_entry ->tag; // TODO looks like a copy paste error
 		c_tlb[line_index].tag = c_tlb_entry->phy_page_num;
 		c_tlb[line_index].tag = c_tlb_entry->v;
 		
@@ -127,7 +118,47 @@ int tlb_hit( const virt_addr_t * vaddr,
              phy_addr_t * paddr,
              const void  * tlb,
              tlb_t tlb_type) {
+	if(vaddr == NULL || paddr == NULL || tlb == NULL || tlb_type == NULL) {
+		return 0;
+	}
+
+	// Virtual Page Number
+	uint64_t vpn = virt_addr_t_to_virtual_page_number(vaddr);
+
+	uint8_t v;
+	uint32_t tag;
+	uint32_t phy_page_num;
+	switch (tlb_type) {
+	case L1_ITLB:
+		uint32_t line_index = vpn % L1_ITLB_LINES;
+		l1_itlb_entry_t* c_tlb = (l1_itlb_entry_t*) tlb;
+		v = c_tlb->v;
+		tag = c_tlb->tag;
+		phy_page_num = c_tlb->phy_page_num;
+		break;
+	case L1_DTLB:
+		uint32_t line_index = vpn % L1_DTLB_LINES;
+		l1_dtlb_entry_t* c_tlb = (l1_dtlb_entry_t*) tlb;
+		v = c_tlb->v;
+		tag = c_tlb->tag;
+		phy_page_num = c_tlb->phy_page_num;
+		break;
+	case L2_TLB:
+		uint32_t line_index = vpn % L2_TLB_LINES;
+		l2_tlb_entry_t* c_tlb = (l2_tlb_entry_t*)tlb;
+		v = c_tlb->v;
+		tag = c_tlb->tag;
+		phy_page_num = c_tlb->phy_page_num;
+		break;
+	}
 	
+	if (v && tag == vpn) {
+		paddr->phy_page_num = phy_page_num;
+		paddr->page_offset = vaddr->page_offset;
+		return 1;
+	}
+	
+	return 0;
 }
 
 //TODO
