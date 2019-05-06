@@ -24,22 +24,20 @@
 typedef uint32_t list_content_t;
 #define print_node(F, N) fprintf(F, "%"PRIu32, N)
 
+typedef struct _node_t {
+    list_content_t value;
+    struct _node_t* previous;
+    struct _node_t* next;
+} node_t;
+
 /**
  * @brief Doubly linked list type
  *
  */
-typedef struct node node_t;
-struct list {
+typedef struct {
     node_t* front;
     node_t* back;
-};
-
-typedef struct list list_t;
-struct node {
-    list_content_t value;
-    node_t* previous;
-    node_t* next;
-};
+} list_t;
 
 /**
  * @brief check whether the list is empty or not

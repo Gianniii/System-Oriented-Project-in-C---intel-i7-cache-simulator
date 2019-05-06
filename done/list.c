@@ -4,11 +4,9 @@
 #include "util.h" // for SIZE_T_FMT
 #include "error.h"
 
-// TODO Remove documentation from .h prototyped functions
-
 int is_empty_list(const list_t* this){
 	M_REQUIRE_NON_NULL(this);
-	if(this->front == NULL || this->back == NULL) { // TODO && and error checks
+	if(this->front == NULL && this->back == NULL) {
 		return 1;
 	}
 	return 0;
@@ -19,12 +17,8 @@ void init_list(list_t* this){
 	this->back = NULL;
 }
 
-/**
- * @brief clear the whole list (make it empty)
- * @param this list to clear
- */
 void clear_list(list_t* this) { 
-	// TODO should free all nodes in list now
+	if (this == NULL) {return;}
 
 	node_t* curr = this->front;
 	node_t* next;
@@ -60,7 +54,7 @@ node_t* push_back(list_t* this, const list_content_t* value) {
 	return newNode;
 }
 
-void move_back(list_t* this, node_t* n) { // TODO Review
+void move_back(list_t* this, node_t* n) {
 	//remove the node and push back an identical node with the same value;
 	if(!is_empty_list(this)){
 		//if is not the first element of the list need to remove the node and then place it at the back
@@ -73,16 +67,10 @@ void move_back(list_t* this, node_t* n) { // TODO Review
 			n->next->previous = NULL;
 		}
 		push_back(this, &n->value);
-		free(n); // TODO n is the pointer to the node to be moved. it shouldnt be freed
+		free(n);
 	}
 }
 
-/**
- * @brief add a new value at the begining of the list
- * @param this list where to add to
- * @param value value to be added
- * @return a pointer to the newly inserted element or NULL in case of error
- */
 node_t* push_front(list_t* this, const list_content_t* value){
 	//check arguments are valid
 	if(this == NULL || value == NULL) return NULL;
@@ -107,10 +95,6 @@ node_t* push_front(list_t* this, const list_content_t* value){
 	return newNode;
 }
 
-/**
- * @brief remove the last value
- * @param this list to remove from
- */
 void pop_back(list_t* this){
 	if(!is_empty_list(this)) {
 		if(this->back->previous != NULL) {
@@ -122,10 +106,6 @@ void pop_back(list_t* this){
 	}
 }
 
-/**
- * @brief remove the first value
- * @param this list to remove from
- */
 void pop_front(list_t* this) {
 	if(!is_empty_list(this)) {
 		if(this->front->next != NULL) {
@@ -137,12 +117,6 @@ void pop_front(list_t* this) {
 	}
 }
 
-/**
- * @brief print a list (on one single line, no newline)
- * @param stream where to print to
- * @param this the list to be printed
- * @return number of printed characters
- */
 int print_list(FILE* stream, const list_t* this) {
 	int number_printed_characters = 0;
 	int first_interation = 0;
@@ -158,12 +132,6 @@ int print_list(FILE* stream, const list_t* this) {
 	return number_printed_characters;
 }
 
-/**
- * @brief print a list reversed way
- * @param stream where to print to
- * @param this the list to be printed
- * @return number of printed characters
- */
 int print_reverse_list(FILE* stream, const list_t* this) {
 	int number_printed_characters = 0;
 	int first_iteration = 0;

@@ -56,20 +56,18 @@ int tlb_flush(void *tlb, tlb_t tlb_type) {
 	M_REQUIRE(tlb_type == L1_DTLB || tlb_type == L1_ITLB || tlb_type == L2_TLB, 
 			  ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
 	
-	void* copy = tlb;
 	if(tlb_type == L1_ITLB) {
-		copy = memset(tlb, 0, L1_ITLB_LINES * sizeof(l1_itlb_entry_t));
+		memset(tlb, 0, L1_ITLB_LINES * sizeof(l1_itlb_entry_t));
 		
 	} else if(tlb_type == L1_DTLB) {
-		copy = memset(tlb, 0, L1_DTLB_LINES * sizeof(l1_dtlb_entry_t));
+		memset(tlb, 0, L1_DTLB_LINES * sizeof(l1_dtlb_entry_t));
 		
 	} else if(tlb_type ==  L2_TLB) {
-		copy = memset(tlb, 0, L2_TLB_LINES * sizeof(l2_tlb_entry_t));
+		memset(tlb, 0, L2_TLB_LINES * sizeof(l2_tlb_entry_t));
 		
 	} else {
 		return ERR_BAD_PARAMETER;
 	}
-	M_REQUIRE_NON_NULL_CUSTOM_ERR(copy, ERR_MEM);
 	return ERR_NONE;
 }
 
