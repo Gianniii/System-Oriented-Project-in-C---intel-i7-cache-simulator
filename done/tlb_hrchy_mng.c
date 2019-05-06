@@ -100,7 +100,6 @@ int tlb_insert( uint32_t line_index,
 	return ERR_NONE;
 }
 
-//TODO
 /**
  * @brief Check if a TLB entry exists in the TLB.
  *
@@ -122,8 +121,7 @@ int tlb_hit( const virt_addr_t * vaddr,
 		return 0;
 	}
 
-	// Virtual Page Number
-	uint64_t vpn = virt_addr_t_to_virtual_page_number(vaddr);
+	uint64_t vpn = virt_addr_t_to_virtual_page_number(vaddr); // Virtual Page Number
 
 	uint8_t v;
 	uint32_t tag;
@@ -154,14 +152,13 @@ int tlb_hit( const virt_addr_t * vaddr,
 	
 	if (v && tag == vpn) {
 		paddr->phy_page_num = phy_page_num;
-		paddr->page_offset = vaddr->page_offset;
+		// paddr->page_offset = vaddr->page_offset; // DONT DO THIS!
 		return 1;
 	}
 	
 	return 0;
 }
 
-//TODO
 /**
  * @brief Ask TLB for the translation.
  *
@@ -184,5 +181,40 @@ int tlb_search( const void * mem_space,
                 l1_dtlb_entry_t * l1_dtlb,
                 l2_tlb_entry_t * l2_tlb,
                 int* hit_or_miss) {
+
+	M_REQUIRE_NON_NULL(mem_space);
+	M_REQUIRE_NON_NULL(vaddr);
+	M_REQUIRE_NON_NULL(paddr);
+	M_REQUIRE_NON_NULL(l1_itlb);
+	M_REQUIRE_NON_NULL(l1_dtlb);
+	M_REQUIRE_NON_NULL(l2_tlb);	
+
+	if (access == INSTRUCTION) {
+		if (tlb_hit(vaddr, paddr, l1_itlb, L1_ITLB)) {
+			hit_or_miss = 1;
+			return ERR_NONE;
+		}
+	} else {
+		if (tlb_hit(vaddr, paddr, l1_dtlb, L1_DTLB)) {
+			hit_or_miss = 1;
+			return ERR_NONE;
+		}
+	}
+
+	// *** "L1 Miss" ***
+
+	uint32_t vpn = virt_addr_t_to_virtual_page_number(vaddr); // Virtual Page Number
+	// uint32_t line_index; remove!
+
+	if (tlb_hit(vaddr, paddr, l2_tlb, L2_TLB)) {
+		hit_or_miss = 1;
+		// TODO transfer phypageoffset to l1 tlb.
+		return ERR_NONE;
+	}
+
+	// *** "L2 Miss" ***
+
+	// TODO
+
 	return ERR_NONE;
 }
