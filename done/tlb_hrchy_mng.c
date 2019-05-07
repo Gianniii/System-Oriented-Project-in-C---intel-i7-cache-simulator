@@ -203,7 +203,7 @@ int tlb_search( const void * mem_space,
 
 	// *** "L1 Miss" ***
 
-	uint32_t vpn = virt_addr_t_to_virtual_page_number(vaddr); // Virtual Page Number
+	uint64_t vpn = virt_addr_t_to_virtual_page_number(vaddr); // Virtual Page Number
 	// uint32_t line_index; remove!
 
 	if (tlb_hit(vaddr, paddr, l2_tlb, L2_TLB)) {
@@ -213,8 +213,31 @@ int tlb_search( const void * mem_space,
 	}
 
 	// *** "L2 Miss" ***
+	hit_or_miss = 0;
 
-	// TODO
+	M_EXIT_IF_ERR(page_walk(mem_space, vaddr, paddr), "page_walk failed");
+
+	// Create new L2 TLB entry and insert it.
+	l2_tlb_entry_t* new_l2_entry = calloc(1, sizeof(tlb_entry_t)); //FIXME Error handling
+	tlb_entry_init(vaddr, paddr, new_l2_entry, L2_TLB);
+	tlb_insert(vpn % L2_TLB_LINES, new_l2_entry, l2_tlb, L2_TLB);
+
+	// Create new L1 TLB entry and insert it.
+	switch (access) {
+	case INSTRUCTION:
+		l1_itlb_entry_t* new_l1_entry = calloc(1, sizeof(tlb_entry_t)); //FIXME Error handling
+		tlb_entry_init(vaddr, paddr, new_l1_entry, L1_ITLB);
+		tlb_insert(vpn % L1_ITLB_LINES, new_l1_entry, l1_itlb, L1_ITLB);
+		break;
+	case DATA:
+		l1_dtlb_entry_t* new_l1_entry = calloc(1, sizeof(tlb_entry_t)); //FIXME Error handling
+		tlb_entry_init(vaddr, paddr, new_l1_entry, L1_DTLB);
+		tlb_insert(vpn % L1_DTLB_LINES, new_l1_entry, l1_dtlb, L1_DTLB);
+		break;
+	// TODO Should case default throw an error?
+	}
+
+	// TODO Invalidate if needed 
 
 	return ERR_NONE;
 }
