@@ -147,6 +147,8 @@ int mem_init_from_dumpfile(const char* filename, void** memory, size_t* mem_capa
     *mem_capacity_in_bytes = (size_t) ftell(file);
     rewind(file);
 
+    M_EXIT_IF(*mem_capacity_in_bytes % PAGE_SIZE != 0, ERR_BAD_PARAMETER, "%s does not contain a multiple of PAGE_SIZE lines", filename);
+
     // Allocates the memory and finalises fields and closes the file if an error occurs.
     if ((*memory = calloc(*mem_capacity_in_bytes, 1)) == NULL) {
         *mem_capacity_in_bytes = 0;
@@ -194,14 +196,14 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
     }
     debug_print("*memory = %p", *memory);
 
-// Macro to exit, close file and free memory if an error is thrown in function call bellow
-#define M_MEMORY_DESC_EXIT_IF(test, err) \
-    if (test) { \
-        fclose(master_file); \
-        free(*memory); \
-        *memory = NULL; \
-        M_EXIT_ERR_NOMSG(err); \
-    }
+    // Macro to exit, close file and free memory if an error is thrown in function call bellow
+    #define M_MEMORY_DESC_EXIT_IF(test, err) \
+        if (test) { \
+            fclose(master_file); \
+            free(*memory); \
+            *memory = NULL; \
+            M_EXIT_ERR_NOMSG(err); \
+        }
 
     // Read PGD PAGE FILENAME
     char target_filename[FILENAME_MAX];
@@ -250,9 +252,10 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
         memset(target_filename, 0, FILENAME_MAX);
     }
 
-    return ERR_NONE;
+    fclose(master_file);
 
-#undef M_MEMORY_DESC_EXIT_IF
+    return ERR_NONE;
+    #undef M_MEMORY_DESC_EXIT_IF
 }
 
 static inline int page_file_read(const char* filename, void* dest) {
