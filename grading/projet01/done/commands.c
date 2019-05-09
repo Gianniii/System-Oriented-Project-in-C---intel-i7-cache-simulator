@@ -145,7 +145,6 @@ int program_add_command(program_t* program, const command_t* command){
 
     // correcteur: missing check of invalid order (hint: authorized enum value)
     // correcteur: missing check of invalid type
-    // correcteur: missing check of invalid read (hint: non-zero write data)
     // correcteur: missing check of invalid write (hint: cannot write instruction)
     // correcteur: missing check of invalid write (hint: write data too large for write size)
 

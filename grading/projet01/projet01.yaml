@@ -19,7 +19,7 @@
 - commands.c: # NE PAS REMPLIR CETTE LIGNE
   - program_print(): 7          # max 7, 
   - program_init(): 5           # max 6, wrong unit of representing allocated -1
-  - program_add_command(): 9    # max 16, 3/8 validity checks done -5, adaptation required -1, missing overflow check -1
+  - program_add_command(): 10    # max 16, 3/7 validity checks done -4, adaptation required -1, missing overflow check -1
   - program_shrink(): 4         # max 6, non-compliant behavour -2
   - program_read(): # NE PAS REMPLIR CETTE LIGNE
       modularisation: 5               # max 5,
