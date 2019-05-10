@@ -73,25 +73,28 @@ int tlb_insert( uint32_t line_index,
 			  ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
 	
 	if(tlb_type == L1_ITLB) {
+		M_REQUIRE(line_index < L1_ITLB_LINES);
 		l1_itlb_entry_t* c_tlb = (l1_itlb_entry_t*)tlb;
 		const l1_itlb_entry_t* c_tlb_entry = (const l1_itlb_entry_t*) tlb_entry;
 		c_tlb[line_index].tag = c_tlb_entry ->tag; // TODO looks like a copy paste error
-		c_tlb[line_index].tag = c_tlb_entry->phy_page_num;
-		c_tlb[line_index].tag = c_tlb_entry->v;
+		c_tlb[line_index].phy_page_num = c_tlb_entry->phy_page_num;
+		c_tlb[line_index].v = c_tlb_entry->v;
 		
 	} else if(tlb_type == L1_DTLB) {
+		M_REQUIRE(line_index < L1_DTLB_LINES);
 		l1_dtlb_entry_t* c_tlb = (l1_dtlb_entry_t*)tlb;
 		const l1_dtlb_entry_t* c_tlb_entry = (const l1_dtlb_entry_t*) tlb_entry;
 		c_tlb[line_index].tag = c_tlb_entry ->tag;
-		c_tlb[line_index].tag = c_tlb_entry->phy_page_num;
-		c_tlb[line_index].tag = c_tlb_entry->v;
+		c_tlb[line_index].phy_page_num= c_tlb_entry->phy_page_num;
+		c_tlb[line_index].v = c_tlb_entry->v;
 		
 	} else if(tlb_type ==  L2_TLB) {
+		M_REQUIRE(line_index < L2_TLB_LINES);
 		l2_tlb_entry_t* c_tlb = (l2_tlb_entry_t*)tlb;
 		const l2_tlb_entry_t* c_tlb_entry = (const l2_tlb_entry_t*) tlb_entry;
 		c_tlb[line_index].tag = c_tlb_entry ->tag;
-		c_tlb[line_index].tag = c_tlb_entry->phy_page_num;
-		c_tlb[line_index].tag = c_tlb_entry->v;
+		c_tlb[line_index].phy_page_num = c_tlb_entry->phy_page_num;
+		c_tlb[line_index].v = c_tlb_entry->v;
 		
 	} else {
 		return ERR_BAD_PARAMETER;
