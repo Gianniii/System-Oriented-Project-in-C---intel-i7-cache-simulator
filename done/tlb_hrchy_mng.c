@@ -73,15 +73,15 @@ int tlb_insert( uint32_t line_index,
 			  ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
 	
 	if(tlb_type == L1_ITLB) {
-		M_REQUIRE(line_index < L1_ITLB_LINES);
+		M_REQUIRE(line_index < L1_ITLB_LINES, ERR_BAD_PARAMETER, "%s", "IndexOutBounds");
 		l1_itlb_entry_t* c_tlb = (l1_itlb_entry_t*)tlb;
 		const l1_itlb_entry_t* c_tlb_entry = (const l1_itlb_entry_t*) tlb_entry;
-		c_tlb[line_index].tag = c_tlb_entry ->tag; // TODO looks like a copy paste error
+		c_tlb[line_index].tag = c_tlb_entry ->tag;
 		c_tlb[line_index].phy_page_num = c_tlb_entry->phy_page_num;
 		c_tlb[line_index].v = c_tlb_entry->v;
 		
 	} else if(tlb_type == L1_DTLB) {
-		M_REQUIRE(line_index < L1_DTLB_LINES);
+		M_REQUIRE(line_index < L1_DTLB_LINES,  ERR_BAD_PARAMETER, "%s", "IndexOutBounds");
 		l1_dtlb_entry_t* c_tlb = (l1_dtlb_entry_t*)tlb;
 		const l1_dtlb_entry_t* c_tlb_entry = (const l1_dtlb_entry_t*) tlb_entry;
 		c_tlb[line_index].tag = c_tlb_entry ->tag;
@@ -89,7 +89,7 @@ int tlb_insert( uint32_t line_index,
 		c_tlb[line_index].v = c_tlb_entry->v;
 		
 	} else if(tlb_type ==  L2_TLB) {
-		M_REQUIRE(line_index < L2_TLB_LINES);
+		M_REQUIRE(line_index < L2_TLB_LINES,  ERR_BAD_PARAMETER, "%s", "IndexOutBounds");
 		l2_tlb_entry_t* c_tlb = (l2_tlb_entry_t*)tlb;
 		const l2_tlb_entry_t* c_tlb_entry = (const l2_tlb_entry_t*) tlb_entry;
 		c_tlb[line_index].tag = c_tlb_entry ->tag;
@@ -153,7 +153,7 @@ int tlb_hit( const virt_addr_t * vaddr,
 		break;
 	}
 	
-	if (v && tag == vpn) {
+	if (v && (tag == vpn)) {
 		paddr->phy_page_num = phy_page_num;
 		// paddr->page_offset = vaddr->page_offset; // DONT DO THIS!
 		return 1;
@@ -207,11 +207,20 @@ int tlb_search( const void * mem_space,
 	// *** "L1 Miss" ***
 
 	uint64_t vpn = virt_addr_t_to_virtual_page_number(vaddr); // Virtual Page Number
-	// uint32_t line_index; remove!
 
 	if (tlb_hit(vaddr, paddr, l2_tlb, L2_TLB)) {
 		hit_or_miss = 1;
-		// TODO transfer phypageoffset to l1 tlb.
+
+		if (access == INSTRUCTION) {
+			l1_itlb_entry_t new_l1i_entry;
+			tlb_entry_init(vaddr, paddr, &new_l1i_entry, L1_ITLB);
+			tlb_insert(vpn % L1_ITLB_LINES, &new_l1i_entry, l1_itlb, L1_ITLB);
+		} else {
+			l1_dtlb_entry_t new_l1d_entry;
+			tlb_entry_init(vaddr, paddr, &new_l1d_entry, L1_ITLB);
+			tlb_insert(vpn % L1_ITLB_LINES, &new_l1d_entry, l1_itlb, L1_ITLB);
+		}
+
 		return ERR_NONE;
 	}
 
@@ -221,26 +230,26 @@ int tlb_search( const void * mem_space,
 	M_EXIT_IF_ERR(page_walk(mem_space, vaddr, paddr), "page_walk failed");
 
 	// Create new L2 TLB entry and insert it.
-	l2_tlb_entry_t* new_l2_entry = calloc(1, sizeof(tlb_entry_t)); //FIXME Error handling
-	tlb_entry_init(vaddr, paddr, new_l2_entry, L2_TLB);
-	tlb_insert(vpn % L2_TLB_LINES, new_l2_entry, l2_tlb, L2_TLB);
+	l2_tlb_entry_t new_l2_entry;
+	tlb_entry_init(vaddr, paddr, &new_l2_entry, L2_TLB);
+	tlb_insert(vpn % L2_TLB_LINES, &new_l2_entry, l2_tlb, L2_TLB);
 
 	// Create new L1 TLB entry and insert it.
 	switch (access) {
 	case INSTRUCTION:
-		l1_itlb_entry_t* new_l1_entry = calloc(1, sizeof(tlb_entry_t)); //FIXME Error handling
-		tlb_entry_init(vaddr, paddr, new_l1_entry, L1_ITLB);
-		tlb_insert(vpn % L1_ITLB_LINES, new_l1_entry, l1_itlb, L1_ITLB);
+		l1_itlb_entry_t new_l1i_entry;
+		tlb_entry_init(vaddr, paddr, &new_l1i_entry, L1_ITLB);
+		tlb_insert(vpn % L1_ITLB_LINES, &new_l1i_entry, l1_itlb, L1_ITLB);
 		break;
 	case DATA:
-		l1_dtlb_entry_t* new_l1_entry = calloc(1, sizeof(tlb_entry_t)); //FIXME Error handling
-		tlb_entry_init(vaddr, paddr, new_l1_entry, L1_DTLB);
-		tlb_insert(vpn % L1_DTLB_LINES, new_l1_entry, l1_dtlb, L1_DTLB);
+		l1_dtlb_entry_t new_l1d_entry;
+		tlb_entry_init(vaddr, paddr, &new_l1d_entry, L1_DTLB);
+		tlb_insert(vpn % L1_DTLB_LINES, &new_l1d_entry, l1_dtlb, L1_DTLB);
 		break;
 	// TODO Should case default throw an error?
 	}
 
-	// TODO Invalidate if needed 
+	// TODO Invalidate if needed
 
 	return ERR_NONE;
 }
