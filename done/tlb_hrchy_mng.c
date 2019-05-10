@@ -5,6 +5,7 @@
 #include "tlb.h"
 #include "page_walk.h"
 
+// TODO MACROS!
 // static inline size_t tlb_get_lines(tlb_t tlb_type) { // TODO improve or make into macro
 // 	switch (tlb_type) {
 // 	case L1_ITLB:
@@ -212,7 +213,7 @@ int tlb_search( const void * mem_space,
 		}
 	}
 
-	// TODO ERROR CHECKS
+	// TODO MANY ERROR CHECKS
 	// *** "L1 Miss" ***
 
 	uint64_t vpn = virt_addr_t_to_virtual_page_number(vaddr); // Virtual Page Number
@@ -252,7 +253,7 @@ int tlb_search( const void * mem_space,
 		tlb_insert(vpn % L1_ITLB_LINES, &new_l1i_entry, l1_itlb, L1_ITLB);
 
 		if (old_l2_entry.v) {
-			l1_dtlb_entry_t* curr_l1d_entry = &(l1_dtlb[vpn % L1_DTLB_LINES]);
+			l1_dtlb_entry_t* curr_l1d_entry = &(l1_dtlb[vpn % L1_DTLB_LINES]); // TODO this is very probably wrong! 
 			if (curr_l1d_entry->v && (curr_l1d_entry->phy_page_num == old_l2_entry.phy_page_num)) {
 				curr_l1d_entry->v = 0;
 			}
