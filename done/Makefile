@@ -32,7 +32,7 @@ else
 endif
 
 # TODO DONT FORGET to put back   test-addr
-all:: test-commands test-memory test-tlb_simple #test-tlb_hrchy #test-addr
+all:: test-commands test-memory test-tlb_simple test-tlb_hrchy #test-addr
 
 error.o: error.h error.c
 
@@ -44,9 +44,7 @@ page_walk.o : page_walk.c commands.h error.h addr_mng.h addr.h
 
 memory.o: memory.c memory.h error.h addr_mng.h util.h error.h addr.h
 
-tlb_hrchy.o: addr.h
-
-tlb_hrchy_mng.o: tlb_hrchy.h mem_access.h addr.h
+tlb_hrchy_mng.o: tlb_hrchy.h mem_access.h addr.h page_walk.h
 
 test-addr.o: test-addr.c tests.h util.h addr.h addr_mng.h
 test-addr: test-addr.o addr_mng.o test-addr.o
@@ -64,7 +62,8 @@ tlb_mng.o : tlb_mng.c tlb.h addr.h list.h addr_mng.h error.h tlb_mng.h page_walk
 test-tlb_simple.o: test-tlb_simple.c list.h error.h util.h addr_mng.h commands.h memory.h tlb.h tlb_mng.h
 test-tlb_simple: test-tlb_simple.o error.o list.o addr_mng.o commands.o memory.o tlb_mng.o page_walk.o
 
-# test-tlb_hrchy: error.o util.h addr_mng.o commands.o memory.o tlb_hrchy.o tlb_hrchy_mng.o
+test-tlb_hrchy.o: error.h util.h addr_mng.h commands.h memory.h tlb_hrchy.h tlb_hrchy_mng.h page_walk.h
+test-tlb_hrchy: error.o addr_mng.o commands.o memory.o tlb_hrchy_mng.o page_walk.o
 
 # ----------------------------------------------------------------------
 # This part is to make your life easier. See handouts how to make use of it.
@@ -92,7 +91,7 @@ check:: all
 	  for file in tests/*.*.sh; do [ -x $$file ] || echo "Launching $$file"; ./$$file || exit 1; done; \
 	fi
 
-IMAGE=arashpz/feedback:latest
+IMAGE=arashpz/feedback:week09
 feedback:
 	@docker pull $(IMAGE)
 	@docker run -it --rm -v ${PWD}:/home/tester/done $(IMAGE)

@@ -3,7 +3,19 @@
 #include "addr_mng.h"
 #include "tlb_hrchy.h"
 #include "tlb.h"
+#include "page_walk.h"
 
+// static inline size_t tlb_get_lines(tlb_t tlb_type) { // TODO improve or make into macro
+// 	switch (tlb_type) {
+// 	case L1_ITLB:
+// 		return L1_ITLB_LINES;
+// 	case L1_DTLB:
+// 		return L1_DTLB_LINES;
+// 	case L2_TLB:
+// 		return L2_TLB_LINES;
+// 	}
+// 	return 0;
+// }
 
 int tlb_entry_init( const virt_addr_t * vaddr,
                     const phy_addr_t * paddr,
@@ -120,7 +132,7 @@ int tlb_hit( const virt_addr_t * vaddr,
              phy_addr_t * paddr,
              const void  * tlb,
              tlb_t tlb_type) {
-	if(vaddr == NULL || paddr == NULL || tlb == NULL || tlb_type == NULL) {
+	if(vaddr == NULL || paddr == NULL || tlb == NULL) {
 		return 0;
 	}
 
@@ -129,33 +141,29 @@ int tlb_hit( const virt_addr_t * vaddr,
 	uint8_t v;
 	uint32_t tag;
 	uint32_t phy_page_num;
-	switch (tlb_type) {
-	case L1_ITLB:
+	if(tlb_type == L1_ITLB) {
 		uint32_t line_index = vpn % L1_ITLB_LINES;
-		l1_itlb_entry_t* c_tlb = (l1_itlb_entry_t*) tlb;
-		v = c_tlb->v;
-		tag = c_tlb->tag;
-		phy_page_num = c_tlb->phy_page_num;
-		break;
-	case L1_DTLB:
+		l1_itlb_entry_t c_tlb = ((l1_itlb_entry_t*) tlb)[line_index];
+		v = c_tlb.v;
+		tag = c_tlb.tag;
+		phy_page_num = c_tlb.phy_page_num;
+	} else if (tlb_type == L1_DTLB) {
 		uint32_t line_index = vpn % L1_DTLB_LINES;
-		l1_dtlb_entry_t* c_tlb = (l1_dtlb_entry_t*) tlb;
-		v = c_tlb->v;
-		tag = c_tlb->tag;
-		phy_page_num = c_tlb->phy_page_num;
-		break;
-	case L2_TLB:
+		l1_dtlb_entry_t c_tlb = ((l1_dtlb_entry_t*) tlb)[line_index];
+		v = c_tlb.v;
+		tag = c_tlb.tag;
+		phy_page_num = c_tlb.phy_page_num;
+	} else {
 		uint32_t line_index = vpn % L2_TLB_LINES;
-		l2_tlb_entry_t* c_tlb = (l2_tlb_entry_t*)tlb;
-		v = c_tlb->v;
-		tag = c_tlb->tag;
-		phy_page_num = c_tlb->phy_page_num;
-		break;
+		l2_tlb_entry_t c_tlb = ((l2_tlb_entry_t*) tlb)[line_index];
+		v = c_tlb.v;
+		tag = c_tlb.tag;
+		phy_page_num = c_tlb.phy_page_num;
 	}
 	
 	if (v && (tag == vpn)) {
 		paddr->phy_page_num = phy_page_num;
-		// paddr->page_offset = vaddr->page_offset; // DONT DO THIS!
+		paddr->page_offset = vaddr->page_offset; // DONT DO THIS!
 		return 1;
 	}
 	
@@ -194,12 +202,12 @@ int tlb_search( const void * mem_space,
 
 	if (access == INSTRUCTION) {
 		if (tlb_hit(vaddr, paddr, l1_itlb, L1_ITLB)) {
-			hit_or_miss = 1;
+			*hit_or_miss = 1;
 			return ERR_NONE;
 		}
 	} else {
 		if (tlb_hit(vaddr, paddr, l1_dtlb, L1_DTLB)) {
-			hit_or_miss = 1;
+			*hit_or_miss = 1;
 			return ERR_NONE;
 		}
 	}
@@ -210,7 +218,7 @@ int tlb_search( const void * mem_space,
 	uint64_t vpn = virt_addr_t_to_virtual_page_number(vaddr); // Virtual Page Number
 
 	if (tlb_hit(vaddr, paddr, l2_tlb, L2_TLB)) {
-		hit_or_miss = 1;
+		*hit_or_miss = 1;
 
 		if (access == INSTRUCTION) {
 			l1_itlb_entry_t new_l1i_entry;
@@ -226,7 +234,7 @@ int tlb_search( const void * mem_space,
 	}
 
 	// *** "L2 Miss" ***
-	hit_or_miss = 0;
+	*hit_or_miss = 0;
 
 	l2_tlb_entry_t old_l2_entry = l2_tlb[vpn % L2_TLB_LINES];
 	
