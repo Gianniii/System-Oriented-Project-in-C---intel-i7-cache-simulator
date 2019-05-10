@@ -30,7 +30,7 @@ int tlb_entry_init( const virt_addr_t * vaddr,
 	M_REQUIRE(tlb_type == L1_DTLB || tlb_type == L1_ITLB || tlb_type == L2_TLB, 
 			  ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
 
-	uint32_t tag = virt_addr_t_to_virtual_page_number(vaddr);
+	uint64_t tag = virt_addr_t_to_virtual_page_number(vaddr);
 	
 	
 	//the tag must be shifted so as to remove the index in the virtual address
@@ -140,7 +140,7 @@ int tlb_hit( const virt_addr_t * vaddr,
 	uint64_t vpn = virt_addr_t_to_virtual_page_number(vaddr); // Virtual Page Number
 
 	uint8_t v;
-	uint32_t tag;
+	uint64_t tag;
 	uint32_t phy_page_num;
 	if(tlb_type == L1_ITLB) {
 		uint32_t line_index = vpn % L1_ITLB_LINES;
@@ -148,25 +148,35 @@ int tlb_hit( const virt_addr_t * vaddr,
 		v = c_tlb.v;
 		tag = c_tlb.tag;
 		phy_page_num = c_tlb.phy_page_num;
+		if (v && (tag == vpn >> L1_ITLB_LINES_BITS)) {
+		paddr->phy_page_num = phy_page_num;
+		paddr->page_offset = vaddr->page_offset; // DONT DO THIS!
+		return 1;
+	}
 	} else if (tlb_type == L1_DTLB) {
 		uint32_t line_index = vpn % L1_DTLB_LINES;
 		l1_dtlb_entry_t c_tlb = ((l1_dtlb_entry_t*) tlb)[line_index];
 		v = c_tlb.v;
 		tag = c_tlb.tag;
 		phy_page_num = c_tlb.phy_page_num;
+		if (v && (tag == vpn >> L1_DTLB_LINES_BITS)) {
+		paddr->phy_page_num = phy_page_num;
+		paddr->page_offset = vaddr->page_offset; // DONT DO THIS!
+		return 1;
+	}
 	} else {
 		uint32_t line_index = vpn % L2_TLB_LINES;
 		l2_tlb_entry_t c_tlb = ((l2_tlb_entry_t*) tlb)[line_index];
 		v = c_tlb.v;
 		tag = c_tlb.tag;
 		phy_page_num = c_tlb.phy_page_num;
-	}
-	
-	if (v && (tag == vpn)) {
+		if (v && (tag == vpn >> L2_TLB_LINES_BITS)) {
 		paddr->phy_page_num = phy_page_num;
 		paddr->page_offset = vaddr->page_offset; // DONT DO THIS!
 		return 1;
 	}
+	}
+	
 	
 	return 0;
 }
