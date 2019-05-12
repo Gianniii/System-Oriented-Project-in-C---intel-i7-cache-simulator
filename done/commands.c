@@ -36,7 +36,7 @@ int program_init(program_t* program){
     M_EXIT_IF_NULL(program->listing = calloc(LISTING_PADDING, sizeof(command_t)), sizeof(command_t));
 
     program->nb_lines = 0;
-    program->allocated = LISTING_PADDING;
+    program->allocated = LISTING_PADDING * sizeof(command_t);
     
     return ERR_NONE;
 }
@@ -181,8 +181,10 @@ int program_read(const char* filename, program_t* program){
     }
     
     fclose(input) ;
+    
+    program_shrink(program);
 
-    return ERR_NONE; /* pour le moment... en attendant le cours 10 */
+    return ERR_NONE;
 }
 
 command_t read_command(FILE* input){
