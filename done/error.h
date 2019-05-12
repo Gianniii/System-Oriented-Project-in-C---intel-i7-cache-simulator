@@ -124,8 +124,8 @@ typedef enum {
 #define M_EXIT_IF_ERR_NOMSG(err)   \
     do { \
         error_code retVal = err; \
-        if (test) { \
-            M_EXIT_ERR_NOMSG(retVal) \
+        if (retVal != ERR_NONE) { \
+            M_EXIT_ERR_NOMSG(retVal); \
         } \
     } while (0)
 
