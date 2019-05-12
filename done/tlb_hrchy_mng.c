@@ -11,6 +11,7 @@
 #define M_L2_TLB_ENTRY l2_tlb_entry_t
 
 // Used to get a ..._entry_t from a tlb_type (enum)
+// To be used strictly with parameters L1_ITLB, L1_DTLB or L2_TLB
 #define M_TLB_ENTRY_T(m_tlb_type) M_ ## m_tlb_type ## _ENTRY
 
 // Creates a if else if .. statement with a select macro for all 3 tlb_types
@@ -99,18 +100,11 @@ int tlb_hit( const virt_addr_t * vaddr,
 
 	uint64_t vpn = virt_addr_t_to_virtual_page_number(vaddr); // Virtual Page Number
 
-	uint8_t v;
-	uint64_t tag;
-	uint32_t phy_page_num;
-
 	#define M_TLB_HIT(m_tlb_type) \
 		uint32_t line_index = vpn % (m_tlb_type ## _LINES); \
 		M_TLB_ENTRY_T(m_tlb_type) c_tlb = ((M_TLB_ENTRY_T(m_tlb_type)*) tlb)[line_index]; \
-		v = c_tlb.v; \
-		tag = c_tlb.tag; \
-		phy_page_num = c_tlb.phy_page_num; \
-		if (v && (tag == vpn >> (m_tlb_type ## _LINES_BITS))) { \
-			paddr->phy_page_num = phy_page_num; \
+		if (c_tlb.v && (c_tlb.tag == vpn >> (m_tlb_type ## _LINES_BITS))) { \
+			paddr->phy_page_num = c_tlb.phy_page_num; \
 			paddr->page_offset = vaddr->page_offset; \
 			return 1; \
 		}

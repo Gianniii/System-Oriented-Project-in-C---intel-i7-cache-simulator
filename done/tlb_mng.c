@@ -32,15 +32,6 @@ int tlb_flush(tlb_entry_t * tlb) {
 	return ERR_NONE;
 }
 
-/**
- * @brief Insert an entry to a tlb.
- * Eviction policy is least recently used (LRU). 
- *
- * @param line_index the number of the line to overwrite
- * @param tlb_entry pointer to the tlb entry to insert
- * @param tlb pointer to the TLB
- * @return  error code
- */
 int tlb_insert( uint32_t line_index,
                 const tlb_entry_t * tlb_entry,
                 tlb_entry_t * tlb) {

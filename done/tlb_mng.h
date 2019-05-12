@@ -12,12 +12,6 @@
 #include "addr.h"
 #include "list.h"
 
-/* TODO WEEK 08:
- * Définir ici le type replacement_policy_t
- * (et supprimer ces quatre lignes de commentaire).
- */
-
-//i defined this typedef's so could be wrong.
 typedef node_t* (*push_back_policy)(list_t*, const list_content_t*);
 typedef void (*move_back_policy)(list_t*, node_t*);
 typedef struct {
