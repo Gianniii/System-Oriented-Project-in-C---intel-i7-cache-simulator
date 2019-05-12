@@ -5,8 +5,6 @@
 
 static inline uint64_t extractBits64(uint64_t sample, const uint8_t start, const uint8_t stop);
 
-// Week 4 
-
 //=========================================================================
 // Helper methods
 //=========================================================================
@@ -20,7 +18,6 @@ static inline uint64_t extractBits64(uint64_t sample, const uint8_t start, const
  * @return the right justified extracted u_int bitstring
  */
 uint64_t extractBits64(uint64_t sample, const uint8_t start, const uint8_t stop) {
-	//DONT NEED TO HANDLE ERRORS FOR HELPER METHODS
     return (sample << (64 - stop)) >> (64 - stop + start);
 }
 
@@ -53,18 +50,32 @@ int init_virt_addr(virt_addr_t * vaddr,
 	return ERR_NONE;
 }
 
+#define PTE_INDEX PAGE_OFFSET
+#define PMD_INDEX (PTE_INDEX + PTE_ENTRY)
+#define PUD_INDEX (PMD_INDEX + PMD_ENTRY)
+#define PGD_INDEX (PUD_INDEX + PUD_ENTRY)
+#define RESERVED_INDEX (PGD_INDEX + PGD_ENTRY)
+
 int init_virt_addr64(virt_addr_t * vaddr, uint64_t vaddr64){
 	M_REQUIRE_NON_NULL(vaddr);
 	return init_virt_addr(vaddr, 
-			(uint16_t)extractBits64(vaddr64, 39, 48),
-			(uint16_t)extractBits64(vaddr64, 30, 39),
-			(uint16_t)extractBits64(vaddr64, 21, 30),
-			(uint16_t)extractBits64(vaddr64, 12, 21),
-			(uint16_t)extractBits64(vaddr64, 0, 12)
+			(uint16_t)extractBits64(vaddr64, PGD_INDEX, RESERVED_INDEX),
+			(uint16_t)extractBits64(vaddr64, PUD_INDEX, PGD_INDEX),
+			(uint16_t)extractBits64(vaddr64, PMD_INDEX, PUD_INDEX),
+			(uint16_t)extractBits64(vaddr64, PTE_INDEX, PMD_INDEX),
+			(uint16_t)extractBits64(vaddr64, 0, PTE_INDEX)
 		);
 }
 
+#undef PTE_INDEX
+#undef PMD_INDEX
+#undef PUD_INDEX
+#undef PGD_INDEX
+#undef RESERVED_INDEX
+
 int init_phy_addr(phy_addr_t* paddr, uint32_t page_begin, uint32_t page_offset){ 
+	M_REQUIRE(page_begin % PAGE_SIZE == 0, ERR_BAD_PARAMETER, "%s", "page_begin not a multiple of PAGE_SIZE");
+
     uint32_t page_num = page_begin >> PAGE_OFFSET;
    
     M_REQUIRE_NON_NULL(paddr);

@@ -17,7 +17,7 @@ void init_list(list_t* this){
 	this->back = NULL;
 }
 
-void clear_list(list_t* this) { 
+void clear_list(list_t* this) {
 	if (this == NULL) {return;}
 
 	node_t* curr = this->front;
@@ -33,7 +33,6 @@ void clear_list(list_t* this) {
 
 
 node_t* push_back(list_t* this, const list_content_t* value) {
-	//check arguments are valid
 	if(this == NULL || value == NULL) return NULL;
 	//allocated memory for new node
 	node_t* newNode;
@@ -60,7 +59,7 @@ void move_back(list_t* this, node_t* n) {
 		//if is not the first element of the list need to remove the node and then place it at the back
 		if(n->next == NULL) return; // do nothing if its its the last node
 		if(n->previous != NULL) {
-			n->previous->next = n->next; 
+			n->previous->next = n->next;
 			n->next->previous = n->previous;
 		} else { //if n is the first element but not the last element
 			this->front = n->next;
@@ -74,7 +73,7 @@ void move_back(list_t* this, node_t* n) {
 node_t* push_front(list_t* this, const list_content_t* value){
 	//check arguments are valid
 	if(this == NULL || value == NULL) return NULL;
-	
+
 	//allocated memory for new node
 	node_t* newNode;
 	newNode = calloc(1, sizeof(node_t));
@@ -89,9 +88,9 @@ node_t* push_front(list_t* this, const list_content_t* value){
 	} else {
 		this->front->previous = newNode;
 	}
-	
+
 	this->front = newNode;
-	
+
 	return newNode;
 }
 
@@ -124,7 +123,7 @@ int print_list(FILE* stream, const list_t* this) {
 	for_all_nodes(n, this) {
 		if(first_interation == 1) {
 			fprintf(stream, ", ");
-		} 
+		}
 		number_printed_characters += print_node(stream, n->value);
 		first_interation = 1;
 	}

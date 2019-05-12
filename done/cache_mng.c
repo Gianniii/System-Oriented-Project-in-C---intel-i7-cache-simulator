@@ -91,12 +91,12 @@ int cache_entry_init(const void * mem_space,
     M_REQUIRE_NON_NULL(mem_space);
 	M_REQUIRE_NON_NULL(paddr);
 	M_REQUIRE_NON_NULL(cache_entry);
-	M_REQUIRE(cache_type == L1_ICACHE || cache_type == L1_DCACHE || cache_type == L2_CACHE, 
+	M_REQUIRE(cache_type == L1_ICACHE || cache_type == L1_DCACHE || cache_type == L2_CACHE,
 			  ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
 
- 
+
     uint32_t tag = paddr->phy_page_num << paddr->page_offset: //TODO: macro or helper method for this
-	
+
 	//uint32_t index;
 	//the tag must be shifted so as to remove the index in the virtual address
 	if(tlb_type == L1_ICACHE {
@@ -117,10 +117,10 @@ int cache_entry_init(const void * mem_space,
 	} else {
 		return ERR_BAD_PARAMETER;
 	}
-	
+
 	//TODO : INIT THE LINE IN CACHE
     const pte_t* start = (const pte_t *) mem_space;
-    
-	
+
+
 	return ERR_NONE;
 }

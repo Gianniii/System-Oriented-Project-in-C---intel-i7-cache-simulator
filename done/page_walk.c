@@ -3,7 +3,7 @@
 #include "error.h"
 #include "addr_mng.h"
 
-static inline pte_t read_page_entry(const pte_t * start, pte_t page_start, uint16_t index) { 
+static inline pte_t read_page_entry(const pte_t * start, pte_t page_start, uint16_t index) {
     return start[(page_start / 4) + index];
 }
 

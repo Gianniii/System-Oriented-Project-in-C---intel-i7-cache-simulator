@@ -25,7 +25,7 @@
 /**
  * @brief Reads contents of the file and puts them at dest.
  * @param filename name of binary file to load. Should contain precicely 4096 bytes.
- * @param dest pointer to the begining for the memory space into which the 
+ * @param dest pointer to the begining for the memory space into which the
  *        4096 bytes should be loaded. Should already be initialized!
  */
 static inline int page_file_read(const char* filename, void* dest);
@@ -171,6 +171,9 @@ int mem_init_from_dumpfile(const char* filename, void** memory, size_t* mem_capa
     return ERR_NONE;
 }
 
+#define _STR(x) #x
+#define STR(x) _STR(x)
+
 int mem_init_from_description(const char* master_filename, void** memory, size_t* mem_capacity_in_bytes) {
     M_REQUIRE_NON_NULL(master_filename);
     M_REQUIRE_NON_NULL(memory);
@@ -207,14 +210,14 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
 
     // Read PGD PAGE FILENAME
     char target_filename[FILENAME_MAX];
-    M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " %s ", target_filename) != 1, ERR_IO);
+    M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " %"STR(FILENAME_MAX)"s ", target_filename) != 1, ERR_IO);
     debug_print("pgd_filename = %s", target_filename);
-    
+
     // Read and load the PGD_PAGE
     int err;
     M_MEMORY_DESC_EXIT_IF((err = page_file_read(target_filename, *memory)) != ERR_NONE, err);
     memset(target_filename, 0, FILENAME_MAX);
-    
+
     // Read NUMBER OF TRANSLATION PAGES
     size_t n_translation_pages;
     M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " %zu ", &n_translation_pages) != 1, ERR_IO)
@@ -224,14 +227,14 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
     for (size_t i = 0; i < n_translation_pages; i++) {
         uint32_t index_offset;
         M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " 0x%"SCNx32" ", &index_offset) != 1, ERR_IO);
-        M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " %s ", target_filename) != 1, ERR_IO);
+        M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " %"STR(FILENAME_MAX)"s ", target_filename) != 1, ERR_IO);
         debug_print("translation_page %zu : index_offset = %x\ttp_filename = %s", i, index_offset, target_filename);
 
         // Casts are optional, but we use them since void* pointer arithmetic causes warnings at compilation
         M_MEMORY_DESC_EXIT_IF((err = page_file_read(target_filename, (void*)((uint64_t)*memory + (uint64_t)index_offset))), err);
         memset(target_filename, 0, FILENAME_MAX);
     }
-    
+
     #ifdef DEBUG // Counter used by the loop below to have more coherent debug information
     size_t debug_counter = 0;
     #endif
@@ -239,7 +242,7 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
     while (!feof(master_file)) {
         uint64_t vaddr64;
         M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " 0x%"SCNx64" ", &vaddr64) != 1, ERR_IO);
-        M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " %s ", target_filename) != 1, ERR_IO);
+        M_MEMORY_DESC_EXIT_IF(fscanf(master_file, " %"STR(FILENAME_MAX)"s ", target_filename) != 1, ERR_IO);
 
         debug_print("data_page %zu : vaddr64 = %"SCNx64"\tdata_filename = %s", debug_counter++, vaddr64, target_filename);
 
@@ -247,7 +250,7 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
         M_MEMORY_DESC_EXIT_IF((err = init_virt_addr64(&vaddr, vaddr64)) != ERR_NONE, err);
         phy_addr_t paddr;
         M_MEMORY_DESC_EXIT_IF((err = page_walk(*memory, &vaddr, &paddr)) != ERR_NONE, err);
-        
+
         M_MEMORY_DESC_EXIT_IF((err = page_file_read(target_filename, paddr_to_ptr(*memory, paddr))), err);
         memset(target_filename, 0, FILENAME_MAX);
     }
@@ -257,6 +260,9 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
     return ERR_NONE;
     #undef M_MEMORY_DESC_EXIT_IF
 }
+
+#undef _STR
+#undef STR
 
 static inline int page_file_read(const char* filename, void* dest) {
     FILE* file = fopen(filename, "r");
@@ -276,7 +282,7 @@ static inline int page_file_read(const char* filename, void* dest) {
 
 static inline void* paddr_to_ptr(void* mem_start, phy_addr_t paddr) {
     return  (void*) (
-              ((uint64_t) mem_start) 
+              ((uint64_t) mem_start)
             + ((((uint64_t) paddr.phy_page_num) << PAGE_OFFSET)
             | ((uint64_t)paddr.page_offset))
         );

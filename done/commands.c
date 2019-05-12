@@ -2,7 +2,7 @@
 #include <inttypes.h>
 #include "commands.h"
 #include "addr.h"
-#include "addr_mng.h"	
+#include "addr_mng.h"
 #include "error.h"
 
 static inline int program_resize(program_t* program, size_t to_allocate);
@@ -25,7 +25,7 @@ static inline int handle_write_data(FILE* input, command_t* command);
 
 static inline void set_write_data(FILE* input, command_t* command);
 
-static inline int set_data_size(FILE* input, command_t* command); 
+static inline int set_data_size(FILE* input, command_t* command);
 
 
 int program_init(program_t* program){
@@ -35,7 +35,7 @@ int program_init(program_t* program){
 
     program->nb_lines = 0;
     program->allocated = LISTING_PADDING * sizeof(command_t);
-    
+
     return ERR_NONE;
 }
 
@@ -60,7 +60,7 @@ int program_resize(program_t* program, size_t to_allocate) {
     M_REQUIRE_NON_NULL(program->listing);
 
     size_t new_size = to_allocate * sizeof(command_t);
-    M_EXIT_IF_NULL(program->listing = realloc(program->listing, new_size), new_size); 
+    M_EXIT_IF_NULL(program->listing = realloc(program->listing, new_size), new_size);
     program->allocated = new_size;
 
     return ERR_NONE;
@@ -70,7 +70,7 @@ int program_print(FILE* output, const program_t* program){
     M_REQUIRE_NON_NULL(output);
     M_REQUIRE_NON_NULL(program);
     M_REQUIRE_NON_NULL(program->listing);
-      
+
      //fprintf every entry(command) in the listing
      size_t i;
      for(i = 0; i < program->nb_lines; ++i) {
@@ -86,17 +86,17 @@ int program_print(FILE* output, const program_t* program){
             //if its an instruction can just print  I + addr;
             fprintf(output, " I");
             uint64_t addr = virt_addr_t_to_uint64_t(&command.vaddr);
-            fprintf(output, " @0x%016" PRIX64, addr);  
+            fprintf(output, " @0x%016" PRIX64, addr);
             fprintf(output, "\n");
             continue; //continue on next command
         } else {
             fprintf(output, " D");
         }
-        
-        //if its command type is data 
+
+        //if its command type is data
         //output data size
         if(command.data_size == sizeof(char)){
-            fprintf(output, "B"); 
+            fprintf(output, "B");
         } else {
             fprintf(output, "W");
         }
@@ -110,12 +110,12 @@ int program_print(FILE* output, const program_t* program){
         }
         //finally print vaddr and \n
         uint64_t addr = virt_addr_t_to_uint64_t(&command.vaddr);
-            fprintf(output, " @0x%016" PRIX64, addr);  
-        
+            fprintf(output, " @0x%016" PRIX64, addr);
+
         fprintf(output, "\n");
      }
-     
-     return ERR_NONE;	 
+
+     return ERR_NONE;
 }
 
 int program_shrink(program_t* program){
@@ -138,21 +138,21 @@ int program_add_command(program_t* program, const command_t* command){
     M_REQUIRE_NON_NULL(program);
     M_REQUIRE_NON_NULL(program->listing);
     if(command->type == INSTRUCTION) {
-        M_REQUIRE(command->data_size == sizeof(word_t), ERR_BAD_PARAMETER, "%s", 
+        M_REQUIRE(command->data_size == sizeof(word_t), ERR_BAD_PARAMETER, "%s",
                   "data size incorrect for an instruction");
         M_REQUIRE(command->order == READ, ERR_BAD_PARAMETER, "%s", "instruction are read only");
-    } 
+    }
     if(command->type == DATA) {
-        M_REQUIRE(command->data_size == sizeof(word_t) || command->data_size == sizeof(char), 
+        M_REQUIRE(command->data_size == sizeof(word_t) || command->data_size == sizeof(char),
                   ERR_BAD_PARAMETER, "%s", "data_size incorrect for data access");
     }
 
     M_REQUIRE((command->vaddr.page_offset % command->data_size) == 0, ERR_BAD_PARAMETER,
                "%s", "page_offset must be a multiple of data size");
-               
+
     // Week 6: Dynamic allocation. Adds the command to our and enlarges listing if its too small.
     while (program->nb_lines * sizeof(command_t) >= program->allocated) {
-        M_EXIT_IF_ERR(program_resize(program, program->allocated * program->allocated), 
+        M_EXIT_IF_ERR(program_resize(program, program->allocated * program->allocated),
                 "program_resize() failed. Cannot resize listing");
     }
     program->listing[program->nb_lines] = *command;
@@ -179,9 +179,9 @@ int program_read(const char* filename, program_t* program){
         //skip whitespaces just incase there are white spaces left at the end of the file
         skip_whitespaces(input);
     }
-    
+
     fclose(input) ;
-    
+
     program_shrink(program);
 
     return ERR_NONE;
@@ -196,12 +196,12 @@ int read_command(FILE* input, command_t* newCommand){
     } else if(order == 'W') {
         newCommand->order = WRITE;
         error = handle_write(input, newCommand);
-    } else {    
+    } else {
         memset(newCommand, 0, sizeof(command_t));
         error = 1;
         fprintf(stderr, "read_command() - Invalid argument");
     }
-    
+
     return error;
 }
 
@@ -243,7 +243,7 @@ int handle_instruction(FILE* input, command_t* command) {
     command->data_size = sizeof(word_t); // by default instructions data size is a word
     error = set_vaddr(input, command);
     return error;
-    
+
 }
 //does the necessary steps the command is of order read and of type data
 int handle_read_data(FILE* input, command_t* command) {
@@ -271,7 +271,7 @@ int set_data_size(FILE* input, command_t* command) {
     char data_size = fgetc(input);
     if(data_size == 'B') {
         command->data_size = sizeof(char); // 1 byte
-    } 
+    }
     if(data_size == 'W') {
         command->data_size = sizeof(word_t);
     } else {
@@ -296,7 +296,7 @@ void set_write_data(FILE* input, command_t* command) {
     command->write_data = word;
 }
 
-//skip whitespaces if there are 
+//skip whitespaces if there are
 void skip_whitespaces(FILE* input){
     fscanf(input, " ");
 }
