@@ -105,7 +105,7 @@ int print_virtual_address(FILE* where, const virt_addr_t* vaddr){
 int print_physical_address(FILE* where, const phy_addr_t* paddr){
 	M_REQUIRE_NON_NULL(paddr);
 	M_REQUIRE_NON_NULL(where);
-	int nb = fprintf(where,"page num =0x%" PRIX32 "; offset=0x%" PRIX32, paddr->phy_page_num,
+	int nb = fprintf(where,"page num=0x%" PRIX32 "; offset=0x%" PRIX32, paddr->phy_page_num,
 	                 paddr->page_offset);
 	return nb;
 }
