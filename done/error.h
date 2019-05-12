@@ -115,6 +115,22 @@ typedef enum {
 
 // ----------------------------------------------------------------------
 /**
+ * @brief M_EXIT_IF_ERR_NOMSG Added by us. Macro tests if an error occured and
+ *        then returns a generic message if so.
+ *        i.e. if error `err` is different from ERR_NONE.
+ *        Example usage:
+ *            M_EXIT_IF_ERR_NOMSG(err);
+ */
+#define M_EXIT_IF_ERR_NOMSG(err)   \
+    do { \
+        error_code retVal = err; \
+        if (test) { \
+            M_EXIT_ERR_NOMSG(retVal) \
+        } \
+    } while (0)
+
+// ----------------------------------------------------------------------
+/**
  * @brief M_EXIT_IF_NULL macro is usefull to warn (and stop) when NULL pointers are detected.
  *        size is typically the allocation size.
  *        Example usage:
