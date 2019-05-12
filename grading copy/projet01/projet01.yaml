@@ -7,11 +7,11 @@
 - addr_mng.c: # NE PAS REMPLIR CETTE LIGNE
   - init_virt_addr(): 6                        # max 6, 
   - init_virt_addr64(): 6                      # max 6, 
-  - init_phy_addr(): 3                         # max 4, missing sanity check -1
+  - init_phy_addr(): 3                         # max 4, missing sanity check -1 //TODO
   - virt_addr_t_to_uint64_t(): 5               # max 5, 
   - virt_addr_t_to_virtual_page_number(): 5    # max 5, 
   - print_virtual_address(): 3                 # max 3, 
-  - print_physical_address(): 2.5                # max 3, incorrect print -0.5
+  - print_physical_address(): 2.5                # max 3, incorrect print -0.5 
 - commands.h: # NE PAS REMPLIR CETTE LIGNE
     command_word_t: 2    # max 2, 
     command_t: 7         # max 7, 
@@ -30,14 +30,14 @@
       command_line_read(): 8          # max 10, missing test and propagation of error code of init_virt_addr64 -1, missing detection and propagation of error from every involved auxiliary function -1
       core: 5                         # max 11, missing handling of error code of program_init -1, missing detection of command reading failure -1, missing handling of error code of program_add_command -1, missing check of ferror and propagation of ERR_IO -1, missing program shrinking -2
   - program_free(): 6                 # max 6, 
-- memory.c: # NE PAS REMPLIR CETTE LIGNE
+- memory.c: # NE PAS REMPLIR CETTE LIGNE //TODO
   - mem_init_from_dumpfile(): # NE PAS REMPLIR CETTE LIGNE
       vérifications d\'usage: 2    # max 2, 
       ouverture fichier: 5         # max 5, 
       allocation mémoire: 4        # max 5, missing check of mem_capacity_in_bytes being a multiple of a page size -1
       lecture fichier: 5           # max 5, 
       fermeture fichier: 2         # max 2, 
-  - mem_init_from_description(): # NE PAS REMPLIR CETTE LIGNE
+  - mem_init_from_description(): # NE PAS REMPLIR CETTE LIGNE //TODO
       vérifications d\'usage: 2      # max 2, 
       ouverture fichier: 5           # max 5, 
       allocation mémoire: 5          # max 5, 

@@ -5,26 +5,15 @@
 #include "tlb.h"
 #include "page_walk.h"
 
-// TODO MACROS!
-// static inline size_t tlb_get_lines(tlb_t tlb_type) { // TODO improve or make into macro
-// 	switch (tlb_type) {
-// 	case L1_ITLB:
-// 		return L1_ITLB_LINES;
-// 	case L1_DTLB:
-// 		return L1_DTLB_LINES;
-// 	case L2_TLB:
-// 		return L2_TLB_LINES;
-// 	}
-// 	return 0;
-// }
-
+// Used by M_TLB_ENTRY_T(m_tlb_type) to get a ..._entry_t from an type
 #define M_L1_ITLB_ENTRY l1_itlb_entry_t
 #define M_L1_DTLB_ENTRY l1_dtlb_entry_t
 #define M_L2_TLB_ENTRY l2_tlb_entry_t
 
+// Used to get a ..._entry_t from a tlb_type (enum)
 #define M_TLB_ENTRY_T(m_tlb_type) M_ ## m_tlb_type ## _ENTRY
 
-#define M_EXECUTE_MACRO_ON_TLB_TYPE(MACRO) \
+#define M_EXECUTE_MACRO_ON_CORRECT_TLB_TYPE(MACRO) \
 		if (tlb_type == L1_ITLB) { \
 			MACRO(L1_ITLB); \
 		} else if (tlb_type == L1_DTLB) { \
@@ -52,7 +41,7 @@ int tlb_entry_init( const virt_addr_t * vaddr,
 		((M_TLB_ENTRY_T(m_tlb_type)*)tlb_entry)->phy_page_num = paddr->phy_page_num; \
 		((M_TLB_ENTRY_T(m_tlb_type)*)tlb_entry)->v = (uint8_t) 1;
 
-	M_EXECUTE_MACRO_ON_TLB_TYPE(M_IF_TLB_ENTRY_INIT)
+	M_EXECUTE_MACRO_ON_CORRECT_TLB_TYPE(M_IF_TLB_ENTRY_INIT)
 	return ERR_NONE;
 
 	#undef M_IF_TLB_ENTRY_INIT
@@ -96,7 +85,7 @@ int tlb_insert( uint32_t line_index,
 		c_tlb[line_index].phy_page_num = c_tlb_entry->phy_page_num; \
 		c_tlb[line_index].v = c_tlb_entry->v;
 
-	M_EXECUTE_MACRO_ON_TLB_TYPE(M_IF_TLB_INSERT)
+	M_EXECUTE_MACRO_ON_CORRECT_TLB_TYPE(M_IF_TLB_INSERT)
 
 	return ERR_NONE;
 
@@ -130,7 +119,7 @@ int tlb_hit( const virt_addr_t * vaddr,
 			return 1; \
 		}
 
-	M_EXECUTE_MACRO_ON_TLB_TYPE(M_TLB_HIT)
+	M_EXECUTE_MACRO_ON_CORRECT_TLB_TYPE(M_TLB_HIT)
 
 	return 0;
 
@@ -239,3 +228,9 @@ int tlb_search( const void * mem_space,
 
 	return ERR_NONE;
 }
+
+#undef M_L1_ITLB_ENTRY
+#undef M_L1_DTLB_ENTRY
+#undef M_L2_TLB_ENTRY
+#undef M_TLB_ENTRY_T
+#undef M_EXECUTE_MACRO_ON_CORRECT_TLB_TYPE

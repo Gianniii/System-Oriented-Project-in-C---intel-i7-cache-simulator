@@ -174,7 +174,7 @@ int program_read(const char* filename, program_t* program){
         skip_whitespaces(input);
         command_t command;
         int error = read_command(input, &command);
-        M_REQUIRE(error == 1, ERR_IO, "%s", "bad input");
+        M_REQUIRE(error == ERR_NONE, ERR_IO, "%s", "bad input");
         program_add_command(program, &command);
         //skip whitespaces just incase there are white spaces left at the end of the file
         skip_whitespaces(input);
@@ -188,7 +188,7 @@ int program_read(const char* filename, program_t* program){
 }
 
 int read_command(FILE* input, command_t* newCommand){
-    int error = 1;
+    int error = 0;
     char order = fgetc(input); //!= EOF
     if(order == 'R') {
         newCommand->order = READ;
@@ -197,8 +197,8 @@ int read_command(FILE* input, command_t* newCommand){
         newCommand->order = WRITE;
         error = handle_write(input, newCommand);
     } else {    
-        memset(&newCommand, 0, sizeof(command_t));
-        error = 0;
+        memset(newCommand, 0, sizeof(command_t));
+        error = 1;
         fprintf(stderr, "read_command() - Invalid argument");
     }
     
@@ -206,7 +206,7 @@ int read_command(FILE* input, command_t* newCommand){
 }
 
 int handle_read(FILE* input, command_t* command){
-	int error = 1;
+	int error = ERR_NONE;
     skip_whitespaces(input);
     char type = fgetc(input);
     if(type == 'I') {
@@ -216,13 +216,13 @@ int handle_read(FILE* input, command_t* command){
         command->type = DATA;
         error = handle_read_data(input, command);
     } else {
-		error = 0;
+		error = ERR_IO;
 	}
 	return error;
 }
 
 int handle_write(FILE* input, command_t* command){
-	int error = 1;
+	int error = ERR_NONE;
     skip_whitespaces(input);
     char type = fgetc(input);
     if(type == 'I') {
@@ -232,13 +232,13 @@ int handle_write(FILE* input, command_t* command){
         command->type = DATA;
         handle_write_data(input, command);
     } else {
-		error = 0;
+		error = ERR_IO;
 	}
 	return error;
 }
 
 int handle_instruction(FILE* input, command_t* command) {
-	int error = 1;
+	int error = ERR_NONE;
     skip_whitespaces(input);
     command->data_size = sizeof(word_t); // by default instructions data size is a word
     error = set_vaddr(input, command);
@@ -256,7 +256,7 @@ int handle_read_data(FILE* input, command_t* command) {
 
 //does the necessary steps the command is of order write and of type data
 int handle_write_data(FILE* input, command_t* command) {
-	int error = 0;
+	int error = ERR_NONE;
     skip_whitespaces(input);
     error = set_data_size(input, command);
     set_write_data(input, command);
@@ -267,7 +267,7 @@ int handle_write_data(FILE* input, command_t* command) {
 //assumes next thing to read is data, and sets it in the command
 int set_data_size(FILE* input, command_t* command) {
     skip_whitespaces(input);
-    int error = 1;
+    int error = ERR_NONE;
     char data_size = fgetc(input);
     if(data_size == 'B') {
         command->data_size = sizeof(char); // 1 byte
@@ -275,7 +275,7 @@ int set_data_size(FILE* input, command_t* command) {
     if(data_size == 'W') {
         command->data_size = sizeof(word_t);
     } else {
-		error = 0;
+		error = ERR_IO;
 	}
 	return error;
 }
@@ -286,7 +286,7 @@ int set_vaddr(FILE* input, command_t* command){
      fscanf(input, "@0x%"SCNx64, &addr);
      int error;
      error = init_virt_addr64(&command->vaddr, addr);
-     return (error == ERR_NONE) ? 1 : 0;
+     return error;
 }
 //assumes next thing to read is is write data, and sets in the command
 void set_write_data(FILE* input, command_t* command) {
