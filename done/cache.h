@@ -62,9 +62,24 @@
 
 /* TODO WEEK 11:
  * Définir ici les types :
- *    - l1_icache_entry_t;
- *    - l1_dcache_entry_t;
  *    - l2_cache_entry_t;
  *    - et cache_t;
  * (et supprimer ces huit lignes de commentaire).
  */
+ typedef enum {L1_ICACHE, L1_DCACHE, L2_CACHE} cache_t;
+ 
+ typedef struct {
+	 uint8_t v;
+	 uint8_t age: 3; 
+	 uint32_t tag: 19;
+	 word_t line[L2_CACHE_WORDS_PER_LINE];
+ } l2_cache_entry_t;
+ 
+ typedef struct {
+	 uint8_t v: 1;
+	 uint8_t age: 2; //used for LRU
+	 uint32_t tag: 22;
+	 word_t line : L1_ICACHE_WORDS_PER_LINE;
+ } l1_icache_entry_t;
+ 
+ typedef l1_icache_entry_t l1_dcache_entry_t;

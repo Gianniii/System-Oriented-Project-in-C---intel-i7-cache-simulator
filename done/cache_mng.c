@@ -73,3 +73,54 @@ int cache_dump(FILE* output, const void* cache, cache_t cache_type)
 
     return ERR_NONE;
 }
+
+/**
+ * @brief Initialize a cache entry (write to the cache entry for the first time)
+ *
+ * @param mem_space starting address of the memory space
+ * @param paddr pointer to physical address, to extract the tag
+ * @param cache_entry pointer to the entry to be initialized
+ * @param cache_type to distinguish between different caches
+ * @return  error code
+ */
+int cache_entry_init(const void * mem_space,
+                     const phy_addr_t * paddr,
+                     void * cache_entry,
+                     cache_t cache_type){
+						 	M_REQUIRE_NON_NULL(vaddr);
+    M_REQUIRE_NON_NULL(mem_space);
+	M_REQUIRE_NON_NULL(paddr);
+	M_REQUIRE_NON_NULL(cache_entry);
+	M_REQUIRE(cache_type == L1_ICACHE || cache_type == L1_DCACHE || cache_type == L2_CACHE, 
+			  ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
+
+ 
+    uint32_t tag = paddr->phy_page_num << paddr->page_offset: //TODO: macro or helper method for this
+	
+	//uint32_t index;
+	//the tag must be shifted so as to remove the index in the virtual address
+	if(tlb_type == L1_ICACHE {
+	 	tag = tag >> L1_ICACHE_TAG_REMAINING_BITS;
+		((l1_icache_entry_t*)tlb_entry)->tag = tag;
+		((l1_icache_entry_t*)tlb_entry)->age = (uint8_t) 0;
+		((l1_icache_entry_t*)tlb_entry)->v = (uint8_t) 1;
+	} else if(tlb_type == L1_DCACHE) {
+		tag = tag >> L1_DCACHE_TAG_REMAINING_BITS;
+		((l1_dcache_entry_t*)tlb_entry)->tag = tag;
+		((l1_dcache_entry_t*)tlb_entry)->age = (uint8_t) 0;
+		((l1_dcache_entry_t*)tlb_entry)->v = (uint8_t) 1;
+	} else if(tlb_type ==  L2_CACHE) {
+		tag = tag >> L2_CACHE_TAG_REMAINING_BITS;
+		((l2_cache_entry_t*)tlb_entry)->tag = tag;
+		((l2_cache_entry_t*)tlb_entry)->age = (uint8_t) 0;
+		((l2_cache_entry_t*)tlb_entry)->v = (uint8_t) 1;
+	} else {
+		return ERR_BAD_PARAMETER;
+	}
+	
+	//TODO : INIT THE LINE IN CACHE
+    const pte_t* start = (const pte_t *) mem_space;
+    
+	
+	return ERR_NONE;
+}
