@@ -18,57 +18,60 @@
 // 	return 0;
 // }
 
+#define M_L1_ITLB_ENTRY l1_itlb_entry_t
+#define M_L1_DTLB_ENTRY l1_dtlb_entry_t
+#define M_L2_TLB_ENTRY l2_tlb_entry_t
+
+#define M_TLB_ENTRY_T(m_tlb_type) M_ ## m_tlb_type ## _ENTRY
+
+#define M_EXECUTE_MACRO_ON_TLB_TYPE(MACRO) \
+		if (tlb_type == L1_ITLB) { \
+			MACRO(L1_ITLB); \
+		} else if (tlb_type == L1_DTLB) { \
+			MACRO(L1_DTLB); \
+		} else { \
+			MACRO(L2_TLB); \
+		}
+
 int tlb_entry_init( const virt_addr_t * vaddr,
                     const phy_addr_t * paddr,
                     void * tlb_entry,
                     tlb_t tlb_type) {
-						
-						
+
 	M_REQUIRE_NON_NULL(vaddr);
 	M_REQUIRE_NON_NULL(paddr);
 	M_REQUIRE_NON_NULL(tlb_entry);
-	M_REQUIRE(tlb_type == L1_DTLB || tlb_type == L1_ITLB || tlb_type == L2_TLB, 
+	M_REQUIRE(tlb_type == L1_DTLB || tlb_type == L1_ITLB || tlb_type == L2_TLB,
 			  ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
 
 	uint64_t tag = virt_addr_t_to_virtual_page_number(vaddr);
-	
-	
-	//the tag must be shifted so as to remove the index in the virtual address
-	if(tlb_type == L1_ITLB) {
-		tag = tag >> L1_ITLB_LINES_BITS;
-		((l1_itlb_entry_t*)tlb_entry)->tag = tag;
-		((l1_itlb_entry_t*)tlb_entry)->phy_page_num = paddr->phy_page_num;
-		((l1_itlb_entry_t*)tlb_entry)->v = (uint8_t) 1;
-	} else if(tlb_type == L1_DTLB) {
-		tag = tag >> L1_DTLB_LINES_BITS;
-		((l1_dtlb_entry_t*)tlb_entry)->tag = tag;
-		((l1_dtlb_entry_t*)tlb_entry)->phy_page_num = paddr->phy_page_num;
-		((l1_dtlb_entry_t*)tlb_entry)->v = (uint8_t) 1;
-	} else if(tlb_type ==  L2_TLB) {
-		tag = tag >> L2_TLB_LINES_BITS;
-		((l2_tlb_entry_t*)tlb_entry)->tag = tag;
-		((l2_tlb_entry_t*)tlb_entry)->phy_page_num = paddr->phy_page_num;
-		((l2_tlb_entry_t*)tlb_entry)->v = (uint8_t) 1;
-	} else {
-		return ERR_BAD_PARAMETER;
-	}
+
+	#define M_IF_TLB_ENTRY_INIT(m_tlb_type) \
+		tag = tag >> (m_tlb_type ## _LINES_BITS); \
+		((M_TLB_ENTRY_T(m_tlb_type)*)tlb_entry)->tag = tag; \
+		((M_TLB_ENTRY_T(m_tlb_type)*)tlb_entry)->phy_page_num = paddr->phy_page_num; \
+		((M_TLB_ENTRY_T(m_tlb_type)*)tlb_entry)->v = (uint8_t) 1;
+
+	M_EXECUTE_MACRO_ON_TLB_TYPE(M_IF_TLB_ENTRY_INIT)
 	return ERR_NONE;
+
+	#undef M_IF_TLB_ENTRY_INIT
 }
 
 int tlb_flush(void *tlb, tlb_t tlb_type) {
 	M_REQUIRE_NON_NULL(tlb);
-	M_REQUIRE(tlb_type == L1_DTLB || tlb_type == L1_ITLB || tlb_type == L2_TLB, 
+	M_REQUIRE(tlb_type == L1_DTLB || tlb_type == L1_ITLB || tlb_type == L2_TLB,
 			  ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
-	
+
 	if(tlb_type == L1_ITLB) {
 		memset(tlb, 0, L1_ITLB_LINES * sizeof(l1_itlb_entry_t));
-		
+
 	} else if(tlb_type == L1_DTLB) {
 		memset(tlb, 0, L1_DTLB_LINES * sizeof(l1_dtlb_entry_t));
-		
+
 	} else if(tlb_type ==  L2_TLB) {
 		memset(tlb, 0, L2_TLB_LINES * sizeof(l2_tlb_entry_t));
-		
+
 	} else {
 		return ERR_BAD_PARAMETER;
 	}
@@ -82,52 +85,24 @@ int tlb_insert( uint32_t line_index,
                 tlb_t tlb_type) {
 	M_REQUIRE_NON_NULL(tlb_entry);
 	M_REQUIRE_NON_NULL(tlb);
-	M_REQUIRE(tlb_type == L1_DTLB || tlb_type == L1_ITLB || tlb_type == L2_TLB, 
+	M_REQUIRE(tlb_type == L1_DTLB || tlb_type == L1_ITLB || tlb_type == L2_TLB,
 			  ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
-	
-	if(tlb_type == L1_ITLB) {
-		M_REQUIRE(line_index < L1_ITLB_LINES, ERR_BAD_PARAMETER, "%s", "IndexOutBounds");
-		l1_itlb_entry_t* c_tlb = (l1_itlb_entry_t*)tlb;
-		const l1_itlb_entry_t* c_tlb_entry = (const l1_itlb_entry_t*) tlb_entry;
-		c_tlb[line_index].tag = c_tlb_entry ->tag;
-		c_tlb[line_index].phy_page_num = c_tlb_entry->phy_page_num;
+
+	#define M_IF_TLB_INSERT(m_tlb_type) \
+		M_REQUIRE(line_index < (m_tlb_type ## _LINES), ERR_BAD_PARAMETER, "%s", "IndexOutBounds"); \
+		M_TLB_ENTRY_T(m_tlb_type)* c_tlb = (M_TLB_ENTRY_T(m_tlb_type)*)tlb; \
+		const M_TLB_ENTRY_T(m_tlb_type)* c_tlb_entry = (const M_TLB_ENTRY_T(m_tlb_type)*) tlb_entry; \
+		c_tlb[line_index].tag = c_tlb_entry ->tag; \
+		c_tlb[line_index].phy_page_num = c_tlb_entry->phy_page_num; \
 		c_tlb[line_index].v = c_tlb_entry->v;
-		
-	} else if(tlb_type == L1_DTLB) {
-		M_REQUIRE(line_index < L1_DTLB_LINES,  ERR_BAD_PARAMETER, "%s", "IndexOutBounds");
-		l1_dtlb_entry_t* c_tlb = (l1_dtlb_entry_t*)tlb;
-		const l1_dtlb_entry_t* c_tlb_entry = (const l1_dtlb_entry_t*) tlb_entry;
-		c_tlb[line_index].tag = c_tlb_entry ->tag;
-		c_tlb[line_index].phy_page_num= c_tlb_entry->phy_page_num;
-		c_tlb[line_index].v = c_tlb_entry->v;
-		
-	} else if(tlb_type ==  L2_TLB) {
-		M_REQUIRE(line_index < L2_TLB_LINES,  ERR_BAD_PARAMETER, "%s", "IndexOutBounds");
-		l2_tlb_entry_t* c_tlb = (l2_tlb_entry_t*)tlb;
-		const l2_tlb_entry_t* c_tlb_entry = (const l2_tlb_entry_t*) tlb_entry;
-		c_tlb[line_index].tag = c_tlb_entry ->tag;
-		c_tlb[line_index].phy_page_num = c_tlb_entry->phy_page_num;
-		c_tlb[line_index].v = c_tlb_entry->v;
-		
-	} else {
-		return ERR_BAD_PARAMETER;
-	} 
-		
+
+	M_EXECUTE_MACRO_ON_TLB_TYPE(M_IF_TLB_INSERT)
+
 	return ERR_NONE;
+
+	#undef M_IF_TLB_INSERT
 }
 
-/**
- * @brief Check if a TLB entry exists in the TLB.
- *
- * On hit, return success (1) and update the physical page number passed as the pointer to the function.
- * On miss, return miss (0).
- *
- * @param vaddr pointer to virtual address
- * @param paddr (modified) pointer to physical address
- * @param tlb pointer to the beginning of the tlb
- * @param tlb_type to distinguish between different TLBs
- * @return hit (1) or miss (0)
- */
 
 int tlb_hit( const virt_addr_t * vaddr,
              phy_addr_t * paddr,
@@ -142,43 +117,24 @@ int tlb_hit( const virt_addr_t * vaddr,
 	uint8_t v;
 	uint64_t tag;
 	uint32_t phy_page_num;
-	if(tlb_type == L1_ITLB) {
-		uint32_t line_index = vpn % L1_ITLB_LINES;
-		l1_itlb_entry_t c_tlb = ((l1_itlb_entry_t*) tlb)[line_index];
-		v = c_tlb.v;
-		tag = c_tlb.tag;
-		phy_page_num = c_tlb.phy_page_num;
-		if (v && (tag == vpn >> L1_ITLB_LINES_BITS)) {
-		paddr->phy_page_num = phy_page_num;
-		paddr->page_offset = vaddr->page_offset; // DONT DO THIS!
-		return 1;
-	}
-	} else if (tlb_type == L1_DTLB) {
-		uint32_t line_index = vpn % L1_DTLB_LINES;
-		l1_dtlb_entry_t c_tlb = ((l1_dtlb_entry_t*) tlb)[line_index];
-		v = c_tlb.v;
-		tag = c_tlb.tag;
-		phy_page_num = c_tlb.phy_page_num;
-		if (v && (tag == vpn >> L1_DTLB_LINES_BITS)) {
-		paddr->phy_page_num = phy_page_num;
-		paddr->page_offset = vaddr->page_offset; // DONT DO THIS!
-		return 1;
-	}
-	} else {
-		uint32_t line_index = vpn % L2_TLB_LINES;
-		l2_tlb_entry_t c_tlb = ((l2_tlb_entry_t*) tlb)[line_index];
-		v = c_tlb.v;
-		tag = c_tlb.tag;
-		phy_page_num = c_tlb.phy_page_num;
-		if (v && (tag == vpn >> L2_TLB_LINES_BITS)) {
-		paddr->phy_page_num = phy_page_num;
-		paddr->page_offset = vaddr->page_offset; // DONT DO THIS!
-		return 1;
-	}
-	}
-	
-	
+
+	#define M_TLB_HIT(m_tlb_type) \
+		uint32_t line_index = vpn % (m_tlb_type ## _LINES); \
+		M_TLB_ENTRY_T(m_tlb_type) c_tlb = ((M_TLB_ENTRY_T(m_tlb_type)*) tlb)[line_index]; \
+		v = c_tlb.v; \
+		tag = c_tlb.tag; \
+		phy_page_num = c_tlb.phy_page_num; \
+		if (v && (tag == vpn >> (m_tlb_type ## _LINES_BITS))) { \
+			paddr->phy_page_num = phy_page_num; \
+			paddr->page_offset = vaddr->page_offset; \
+			return 1; \
+		}
+
+	M_EXECUTE_MACRO_ON_TLB_TYPE(M_TLB_HIT)
+
 	return 0;
+
+	#undef M_TLB_HIT
 }
 
 /**
@@ -209,7 +165,7 @@ int tlb_search( const void * mem_space,
 	M_REQUIRE_NON_NULL(paddr);
 	M_REQUIRE_NON_NULL(l1_itlb);
 	M_REQUIRE_NON_NULL(l1_dtlb);
-	M_REQUIRE_NON_NULL(l2_tlb);	
+	M_REQUIRE_NON_NULL(l2_tlb);
 
 	if (access == INSTRUCTION) {
 		if (tlb_hit(vaddr, paddr, l1_itlb, L1_ITLB)) {
@@ -248,7 +204,7 @@ int tlb_search( const void * mem_space,
 	*hit_or_miss = 0;
 
 	l2_tlb_entry_t old_l2_entry = l2_tlb[vpn % L2_TLB_LINES];
-	
+
 	M_EXIT_IF_ERR(page_walk(mem_space, vaddr, paddr), "page_walk failed");
 
 	// Create new L2 TLB entry and insert it.
@@ -263,7 +219,7 @@ int tlb_search( const void * mem_space,
 		tlb_insert(vpn % L1_ITLB_LINES, &new_l1i_entry, l1_itlb, L1_ITLB);
 
 		if (old_l2_entry.v) {
-			l1_dtlb_entry_t* curr_l1d_entry = &(l1_dtlb[vpn % L1_DTLB_LINES]); // TODO this is very probably wrong! 
+			l1_dtlb_entry_t* curr_l1d_entry = l1_dtlb + (vpn % L1_DTLB_LINES);
 			if (curr_l1d_entry->v && (curr_l1d_entry->phy_page_num == old_l2_entry.phy_page_num)) {
 				curr_l1d_entry->v = 0;
 			}
@@ -274,7 +230,7 @@ int tlb_search( const void * mem_space,
 		tlb_insert(vpn % L1_DTLB_LINES, &new_l1d_entry, l1_dtlb, L1_DTLB);
 
 		if (old_l2_entry.v) {
-			l1_itlb_entry_t* curr_l1i_entry = &(l1_itlb[vpn % L1_DTLB_LINES]);
+			l1_itlb_entry_t* curr_l1i_entry = l1_itlb + (vpn % L1_ITLB_LINES);
 			if (curr_l1i_entry->v && (curr_l1i_entry->phy_page_num == old_l2_entry.phy_page_num)) {
 				curr_l1i_entry->v = 0;
 			}
