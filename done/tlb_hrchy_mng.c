@@ -48,13 +48,14 @@ int tlb_entry_init( const virt_addr_t * vaddr,
 	#undef M_TLB_ENTRY_INIT
 }
 
+
 int tlb_flush(void *tlb, tlb_t tlb_type) {
 	M_REQUIRE_NON_NULL(tlb);
 	M_REQUIRE(tlb_type == L1_DTLB || tlb_type == L1_ITLB || tlb_type == L2_TLB,
 			  ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
 
 	#define M_TLB_FLUSH(m_tlb_type) \
-		memset(tlb, 0, (m_tlb_type ## _LINES_BITS) * sizeof(M_TLB_ENTRY_T(m_tlb_type)))
+		memset(tlb, 0, (m_tlb_type ## _LINES) * sizeof(M_TLB_ENTRY_T(m_tlb_type)))
 
 	M_EXPAND_ALL_TLB_TYPES(M_TLB_FLUSH)
 	return ERR_NONE;
@@ -121,19 +122,6 @@ int tlb_hit( const virt_addr_t * vaddr,
 	#undef M_TLB_HIT
 }
 
-/**
- * @brief Ask TLB for the translation.
- *
- * @param mem_space pointer to the memory space
- * @param vaddr pointer to virtual address
- * @param paddr (modified) pointer to physical address (returned from TLB)
- * @param access to distinguish between fetching instructions and reading/writing data
- * @param l1_itlb pointer to the beginning of L1 ITLB
- * @param l1_dtlb pointer to the beginning of L1 DTLB
- * @param l2_tlb pointer to the beginning of L2 TLB
- * @param hit_or_miss (modified) hit (1) or miss (0)
- * @return error code
- */
 
 int tlb_search( const void * mem_space,
                 const virt_addr_t * vaddr,
