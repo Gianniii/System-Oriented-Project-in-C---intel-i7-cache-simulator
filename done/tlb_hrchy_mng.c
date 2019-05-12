@@ -153,7 +153,7 @@ int tlb_search( const void * mem_space,
 		}
 	}
 
-	// *** L1 Miss now searching L2 ***
+	// *** L1 Miss, now searching L2 ***
 
 	uint64_t vpn = virt_addr_t_to_virtual_page_number(vaddr); // Virtual Page Number
 
@@ -173,17 +173,12 @@ int tlb_search( const void * mem_space,
 		return ERR_NONE;
 	}
 
-	// *** L1 & L2 Miss now to search the memory and update TLBs ***
+	// *** L1 & L2 Miss, now to search the memory and update TLBs ***
 	*hit_or_miss = 0;
 
-	l2_tlb_entry_t old_l2_entry = l2_tlb[vpn % L2_TLB_LINES];
+	l2_tlb_entry_t* old_l2_entry = l2_tlb + (vpn % L2_TLB_LINES);
 
 	M_EXIT_IF_ERR(page_walk(mem_space, vaddr, paddr), "L2 miss - page_walk failed");
-
-	// Create new L2 TLB entry and insert it.
-	l2_tlb_entry_t new_l2_entry;
-	M_EXIT_IF_ERR_NOMSG(tlb_entry_init(vaddr, paddr, &new_l2_entry, L2_TLB));
-	M_EXIT_IF_ERR_NOMSG(tlb_insert(vpn % L2_TLB_LINES, &new_l2_entry, l2_tlb, L2_TLB));
 
 	// Create new L1 TLB entry and insert it.
 	if (access == INSTRUCTION) {
@@ -191,9 +186,9 @@ int tlb_search( const void * mem_space,
 		M_EXIT_IF_ERR_NOMSG(tlb_entry_init(vaddr, paddr, &new_l1i_entry, L1_ITLB));
 		M_EXIT_IF_ERR_NOMSG(tlb_insert(vpn % L1_ITLB_LINES, &new_l1i_entry, l1_itlb, L1_ITLB));
 
-		if (old_l2_entry.v) { // Invalidate old entry if needed
+		if (old_l2_entry->v) { // Invalidate old entry if needed
 			l1_dtlb_entry_t* curr_l1d_entry = l1_dtlb + (vpn % L1_DTLB_LINES);
-			if (curr_l1d_entry->v && (curr_l1d_entry->phy_page_num == old_l2_entry.phy_page_num)) {
+			if (curr_l1d_entry->v && (curr_l1d_entry->phy_page_num == old_l2_entry->phy_page_num)) {
 				curr_l1d_entry->v = 0;
 			}
 		}
@@ -202,13 +197,18 @@ int tlb_search( const void * mem_space,
 		M_EXIT_IF_ERR_NOMSG(tlb_entry_init(vaddr, paddr, &new_l1d_entry, L1_DTLB));
 		M_EXIT_IF_ERR_NOMSG(tlb_insert(vpn % L1_DTLB_LINES, &new_l1d_entry, l1_dtlb, L1_DTLB));
 
-		if (old_l2_entry.v) { // Invalidate old entry if needed
+		if (old_l2_entry->v) { // Invalidate old entry if needed
 			l1_itlb_entry_t* curr_l1i_entry = l1_itlb + (vpn % L1_ITLB_LINES);
-			if (curr_l1i_entry->v && (curr_l1i_entry->phy_page_num == old_l2_entry.phy_page_num)) {
+			if (curr_l1i_entry->v && (curr_l1i_entry->phy_page_num == old_l2_entry->phy_page_num)) {
 				curr_l1i_entry->v = 0;
 			}
 		}
 	}
+
+	// Create new L2 TLB entry and insert it.
+	l2_tlb_entry_t new_l2_entry;
+	M_EXIT_IF_ERR_NOMSG(tlb_entry_init(vaddr, paddr, &new_l2_entry, L2_TLB));
+	M_EXIT_IF_ERR_NOMSG(tlb_insert(vpn % L2_TLB_LINES, &new_l2_entry, l2_tlb, L2_TLB));
 
 	return ERR_NONE;
 }
