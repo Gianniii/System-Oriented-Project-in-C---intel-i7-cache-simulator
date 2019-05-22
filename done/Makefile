@@ -32,8 +32,7 @@ else
 endif
 
 # TODO DONT FORGET to put back   test-addr
-all:: test-commands test-memory test-tlb_simple test-tlb_hrchy #test-addr
-
+all::  test-cache test-commands test-memory test-tlb_simple test-tlb_hrchy test-addr
 error.o: error.h error.c
 
 addr_mng.o: addr_mng.c addr_mng.h error.h addr.h
@@ -63,7 +62,12 @@ test-tlb_simple.o: test-tlb_simple.c list.h error.h util.h addr_mng.h commands.h
 test-tlb_simple: test-tlb_simple.o error.o list.o addr_mng.o commands.o memory.o tlb_mng.o page_walk.o
 
 test-tlb_hrchy.o: error.h util.h addr_mng.h commands.h memory.h tlb_hrchy.h tlb_hrchy_mng.h page_walk.h
-test-tlb_hrchy: error.o addr_mng.o commands.o memory.o tlb_hrchy_mng.o page_walk.o
+test-tlb_hrchy: error.o addr_mng.o commands.o memory.o tlb_hrchy_mng.o page_walk.o test-tlb_hrchy.o
+
+cache_mng.o: mem_access.h addr.h cache.h
+
+test-cache.o: test-cache.c error.h cache_mng.h commands.h memory.h page_walk.h
+test-cache: error.o addr_mng.o test-cache.o cache_mng.o commands.o memory.o page_walk.o
 
 # ----------------------------------------------------------------------
 # This part is to make your life easier. See handouts how to make use of it.
@@ -91,7 +95,7 @@ check:: all
 	  for file in tests/*.*.sh; do [ -x $$file ] || echo "Launching $$file"; ./$$file || exit 1; done; \
 	fi
 
-IMAGE=arashpz/feedback:week09
+IMAGE=arashpz/feedback:latest
 feedback:
 	@docker pull $(IMAGE)
 	@docker run -it --rm -v ${PWD}:/home/tester/done $(IMAGE)

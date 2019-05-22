@@ -10,6 +10,7 @@
 #include "util.h"
 #include "cache_mng.h"
 
+#include <stdio.h>
 #include <inttypes.h> // for PRIx macros
 
 //=========================================================================
@@ -85,18 +86,18 @@ int cache_entry_init(const void * mem_space,
 			  ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
 
 
-    uint32_t phy_addr = paddr->phy_page_num << paddr->page_offset;//TODO: macro or helper method for this
+    uint32_t phy_addr = (paddr->phy_page_num << PAGE_OFFSET) | (paddr->page_offset); //TODO: macro or helper method for this
 
 	//uint32_t index;
 	//the tag must be shifted so as to remove the index in the virtual address
 	size_t i = 0;
 	uint32_t tag;
 	uint32_t alligned_phy_addr = phy_addr & 0xFFFFFFF0; //set 4 msb bits to 0 so that it is a multiple of 16
-	//const word_t* start = (const word_t*) ((mem_space + alligned_phy_addr)/sizeof(word_t)); 
 	
-	//TODO: Check if this is correct
-	const word_t* start = (const word_t*)mem_space + alligned_phy_addr/sizeof(word_t); //not 100% sure (i think mem_space points to addr0 and 
-	//since the phy addr is in byte we divie by 4 to get word addr and return a pointer on words at that addr
+	
+	printf("phy_addr : 0x%" PRIX32 "\n", phy_addr);
+	const word_t* start = (const word_t*)mem_space + alligned_phy_addr/sizeof(word_t);
+	
 	if(cache_type == L1_ICACHE) {
 	 	tag = phy_addr >> L1_ICACHE_TAG_REMAINING_BITS;
 		((l1_icache_entry_t*)cache_entry)->tag = tag;
@@ -115,6 +116,7 @@ int cache_entry_init(const void * mem_space,
 		}
 	} else if(cache_type ==  L2_CACHE) {
 		tag = phy_addr >> L2_CACHE_TAG_REMAINING_BITS;
+		printf("tag corresponding to : 0x%" PRIX32 "is : 0x%" PRIX32 "\n", phy_addr, tag);
 		((l2_cache_entry_t*)cache_entry)->tag = tag;
 		((l2_cache_entry_t*)cache_entry)->age = (uint8_t) 0;
 		((l2_cache_entry_t*)cache_entry)->v = (uint8_t) 1;
@@ -134,7 +136,7 @@ int cache_flush(void *cache, cache_t cache_type) {
 	M_REQUIRE(cache_type == L1_ICACHE || cache_type == L1_DCACHE || cache_type == L2_CACHE,
 			  ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
 	if(cache_type == L1_ICACHE) {
-	 	memset(cache, 0, L1_ICACHE_LINES * sizeof(l1_icache_entry_t));
+	 	memset(cache, 0, L1_ICACHE_LINES * sizeof(l1_icache_entry_t)); //still needa add ways or smthn? 
 	} else if(cache_type == L1_DCACHE) {
 			memset(cache, 0, L1_DCACHE_LINES * sizeof(l1_dcache_entry_t));
 	} else if(cache_type ==  L2_CACHE) {
@@ -163,15 +165,15 @@ int cache_insert(uint16_t cache_line_index,
 		index_in_cache = cache_line_index * L1_ICACHE_WAYS  + cache_way;
 		M_REQUIRE(index_in_cache < L1_ICACHE_LINES * L1_ICACHE_WAYS, ERR_BAD_PARAMETER, "%s", "index out of bounds");
 	 	//((l1_icache_entry_t*)cache)[index_in_cache] = *(l1_icache_entry_t*) cache_line_in;
-	 	cache_entry(L1_ICACHE, L1_ICACHE_WAYS, cache_line_index, cache_way) = *(l1_icache_entry_t*) cache_line_in
+	 	//cache_entry(L1_ICACHE, L1_ICACHE_WAYS, cache_line_index, cache_way) = *(l1_icache_entry_t*) cache_line_in;
 	} else if(cache_type == L1_DCACHE) {
 		index_in_cache = cache_line_index * L1_DCACHE_WAYS  + cache_way;
 		M_REQUIRE(index_in_cache < L1_DCACHE_LINES * L1_DCACHE_WAYS, ERR_BAD_PARAMETER, "%s", "index out of bounds");
-		cache_entry(L1_ICACHE, L1_DCACHE_WAYS, cache_line_index, cache_way) = *(l1_icache_entry_t*) cache_line_in
+		//cache_entry(L1_ICACHE, L1_DCACHE_WAYS, cache_line_index, cache_way) = *(l1_icache_entry_t*) cache_line_in;
 	} else if(cache_type ==  L2_CACHE) {
 		index_in_cache = cache_line_index * L2_CACHE_WAYS  + cache_way;
 		M_REQUIRE(index_in_cache < L2_CACHE_LINES * L2_CACHE_WAYS, ERR_BAD_PARAMETER, "%s", "index out of bounds");
-		cache_entry(L1_ICACHE, L2_CACHE_WAYS, cache_line_index, cache_way) = *(l1_icache_entry_t*) cache_line_in
+		//cache_entry(L1_ICACHE, L2_CACHE_WAYS, cache_line_index, cache_way) = *(l1_icache_entry_t*) cache_line_in;
 	} else {
 		return ERR_BAD_PARAMETER;
 	}
@@ -207,3 +209,104 @@ int cache_hit (const void * mem_space,
 				   //TODO:hit index ?
 	return ERR_NONE;
 }
+
+
+
+ /** @brief Ask cache for a word of data.
+ *  Exclusive policy (https://en.wikipedia.org/wiki/Cache_inclusion_policy)
+ *      Consider the case when L2 is exclusive of L1. Suppose there is a
+ *      processor read request for block X. If the block is found in L1 cache,
+ *      then the data is read from L1 cache and returned to the processor. If
+ *      the block is not found in the L1 cache, but present in the L2 cache,
+ *      then the cache block is moved from the L2 cache to the L1 cache. If
+ *      this causes a block to be evicted from L1, the evicted block is then
+ *      placed into L2. This is the only way L2 gets populated. Here, L2
+ *      behaves like a victim cache. If the block is not found neither in L1 nor
+ *      in L2, then it is fetched from main memory and placed just in L1 and not
+ *      in L2.
+ *
+ * @param mem_space pointer to the memory space
+ * @param paddr pointer to a physical address
+ * @param access to distinguish between fetching instructions and reading/writing data
+ * @param l1_cache pointer to the beginning of L1 CACHE
+ * @param l2_cache pointer to the beginning of L2 CACHE
+ * @param word pointer to the word of data that is returned by cache
+ * @param replace replacement policy
+ * @return error code
+ */
+int cache_read(const void * mem_space,
+               phy_addr_t * paddr,
+               mem_access_t access,
+               void * l1_cache,
+               void * l2_cache,
+               uint32_t * word,
+               cache_replace_t replace){
+				   return ERR_NONE;
+			   }
+
+/**
+ * @brief Write to cache a byte of data. Endianess: LITTLE.
+ *
+ * @param mem_space pointer to the memory space
+ * @param paddr pointer to a physical address
+ * @param l1_cache pointer to the beginning of L1 ICACHE
+ * @param l2_cache pointer to the beginning of L2 CACHE
+ * @param p_byte pointer to the byte to be returned
+ * @param replace replacement policy
+ * @return error code
+ */
+int cache_write_byte(void * mem_space,
+                     phy_addr_t * paddr,
+                     void * l1_cache,
+                     void * l2_cache,
+                     uint8_t p_byte,
+                     cache_replace_t replace){
+						 return ERR_NONE;
+					 }
+					 
+					 /**
+ * @brief Change a word of data in the cache.
+ *  Exclusive policy (see cache_read)
+ *
+ * @param mem_space pointer to the memory space
+ * @param paddr pointer to a physical address
+ * @param l1_cache pointer to the beginning of L1 CACHE
+ * @param l2_cache pointer to the beginning of L2 CACHE
+ * @param word const pointer to the word of data that is to be written to the cache
+ * @param replace replacement policy
+ * @return error code
+ */
+int cache_write(void * mem_space,
+                phy_addr_t * paddr,
+                void * l1_cache,
+                void * l2_cache,
+                const uint32_t * word,
+                cache_replace_t replace){
+					return ERR_NONE;
+				}
+				
+				
+				
+				/**
+ * @brief Ask cache for a byte of data. Endianess: LITTLE.
+ *
+ * @param mem_space pointer to the memory space
+ * @param p_addr pointer to a physical address
+ * @param access to distinguish between fetching instructions and reading/writing data
+ * @param l1_cache pointer to the beginning of L1 CACHE
+ * @param l2_cache pointer to the beginning of L2 CACHE
+ * @param byte pointer to the byte to be returned
+ * @param replace replacement policy
+ * @return error code
+ */
+int cache_read_byte(const void * mem_space,
+                    phy_addr_t * p_paddr,
+                    mem_access_t access,
+                    void * l1_cache,
+                    void * l2_cache,
+                    uint8_t * p_byte,
+                    cache_replace_t replace){
+						return ERR_NONE;
+					}
+
+
