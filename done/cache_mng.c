@@ -9,6 +9,7 @@
 #include "error.h"
 #include "util.h"
 #include "cache_mng.h"
+#include "lru.h"
 
 #include <stdio.h>
 #include <inttypes.h> // for PRIx macros
@@ -251,6 +252,8 @@ int cache_hit (const void * mem_space,
             *hit_index = line_index;
             *p_line = cache_entry->line;
             // TODO update age
+
+            LRU_age_increase(l1_icache_entry_t, L1_ICACHE_WAYS, 1, line_index)
 
             return ERR_NONE; // break;
         }
