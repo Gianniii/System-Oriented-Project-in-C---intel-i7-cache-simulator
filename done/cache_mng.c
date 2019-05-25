@@ -36,6 +36,13 @@
 	}
 
 //=========================================================================
+// Helper methods
+
+static inline uint32_t get_addr(const phy_addr_t * paddr) {
+    return (paddr->phy_page_num << PAGE_OFFSET) | (paddr->page_offset);
+}
+
+//=========================================================================
 #define PRINT_CACHE_LINE(OUTFILE, TYPE, WAYS, LINE_INDEX, WAY, WORDS_PER_LINE) \
     do { \
             fprintf(OUTFILE, "V: %1" PRIx8 ", AGE: %1" PRIx8 ", TAG: 0x%03" PRIx16 ", values: ( ", \
@@ -108,7 +115,7 @@ int cache_entry_init(const void * mem_space,
               ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
 
 
-    uint32_t phy_addr = (paddr->phy_page_num << PAGE_OFFSET) | (paddr->page_offset); //TODO: macro or helper method for this
+    uint32_t phy_addr = get_addr(paddr);
 
     //uint32_t index;
     //the tag must be shifted so as to remove the index in the virtual address
@@ -216,8 +223,17 @@ int cache_hit (const void * mem_space,
                uint8_t *hit_way,
                uint16_t *hit_index,
                cache_t cache_type) {
-                   //check in that line in every way, then return the hit index and the way
-                   //TODO:hit index ?
+    M_REQUIRE_NON_NULL(mem_space);
+    M_REQUIRE_NON_NULL(cache);
+    M_REQUIRE_NON_NULL(paddr);
+    M_REQUIRE_NON_NULL(p_line);
+    M_REQUIRE_NON_NULL(hit_way);
+    M_REQUIRE_NON_NULL(hit_index);
+    M_REQUIRE(cache_type == L1_ICACHE || cache_type == L1_DCACHE || cache_type == L2_CACHE,
+              ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
+
+
+
     return ERR_NONE;
 }
 
