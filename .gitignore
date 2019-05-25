@@ -12,3 +12,4 @@ done/test-memory\.dSYM/
 done/test-tlb_simple
 
 done/test-tlb_hrchy
+done/test-cache
