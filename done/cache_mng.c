@@ -16,7 +16,24 @@
 //=========================================================================
 // Our macros
 
+// Used by M_TLB_ENTRY_T(m_tlb_type) to get a ..._entry_t from an type
+#define M_L1_ICACHE_ENTRY l1_icache_entry_t
+#define M_L1_DCACHE_ENTRY l1_dcache_entry_t
+#define M_L2_CACHE_ENTRY l2_cache_entry_t
 
+// Used to get a ..._entry_t from a tlb_type (enum)
+// To be used strictly with parameters L1_ICACHE, L1_DCACHE or L2_CACHE
+#define M_CACHE_ENTRY_T(m_cache_type) M_ ## m_cache_type ## _ENTRY
+
+// Creates a if else if .. statement with a select macro for all 3 cache types
+#define M_EXPAND_ALL_CACHE_TYPES(MACRO) \
+	if (cache_type == L1_ICACHE) { \
+		MACRO(L1_ICACHE); \
+	} else if (cache_type == L1_DCACHE) { \
+		MACRO(L1_DCACHE); \
+	} else { \
+		MACRO(L2_CACHE); \
+	}
 
 //=========================================================================
 #define PRINT_CACHE_LINE(OUTFILE, TYPE, WAYS, LINE_INDEX, WAY, WORDS_PER_LINE) \
@@ -164,27 +181,13 @@ int cache_insert(uint16_t cache_line_index,
     M_REQUIRE_NON_NULL(cache_line_in);
     M_REQUIRE(cache_type == L1_ICACHE || cache_type == L1_DCACHE || cache_type == L2_CACHE,
               ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
-    
-    
-    //TODO CAN USE GIVEN MACROS FROM CACHE.H TO MAKE I NICER
-    int index_in_cache;
-    
-    if(cache_type == L1_ICACHE) {
-        index_in_cache = cache_line_index * L1_ICACHE_WAYS  + cache_way;
-        M_REQUIRE(index_in_cache < L1_ICACHE_LINES * L1_ICACHE_WAYS, ERR_BAD_PARAMETER, "%s", "index out of bounds");
-         //((l1_icache_entry_t*)cache)[index_in_cache] = *(l1_icache_entry_t*) cache_line_in;
-         //cache_entry(L1_ICACHE, L1_ICACHE_WAYS, cache_line_index, cache_way) = *(l1_icache_entry_t*) cache_line_in;
-    } else if(cache_type == L1_DCACHE) {
-        index_in_cache = cache_line_index * L1_DCACHE_WAYS  + cache_way;
-        M_REQUIRE(index_in_cache < L1_DCACHE_LINES * L1_DCACHE_WAYS, ERR_BAD_PARAMETER, "%s", "index out of bounds");
-        //cache_entry(L1_ICACHE, L1_DCACHE_WAYS, cache_line_index, cache_way) = *(l1_icache_entry_t*) cache_line_in;
-    } else if(cache_type ==  L2_CACHE) {
-        index_in_cache = cache_line_index * L2_CACHE_WAYS  + cache_way;
-        M_REQUIRE(index_in_cache < L2_CACHE_LINES * L2_CACHE_WAYS, ERR_BAD_PARAMETER, "%s", "index out of bounds");
-        //cache_entry(L1_ICACHE, L2_CACHE_WAYS, cache_line_index, cache_way) = *(l1_icache_entry_t*) cache_line_in;
-    } else {
-        return ERR_BAD_PARAMETER;
-    }
+
+    #define M_CACHE_INSERT(m_cache_type) \
+        M_REQUIRE(cache_line_index <= m_cache_type ## _LINES, ERR_BAD_PARAMETER, "%s", "cache_line_index out of bounds"); \
+        M_CACHE_ENTRY_T(m_cache_type)* cache_line = cache_entry(M_CACHE_ENTRY_T(m_cache_type), m_cache_type ## _WAYS, cache_line_index, cache_way); \
+        *cache_line = *((M_CACHE_ENTRY_T(m_cache_type)*) cache_line_in); \
+
+    M_EXPAND_ALL_CACHE_TYPES(M_CACHE_INSERT)
     return ERR_NONE;
 }
 
