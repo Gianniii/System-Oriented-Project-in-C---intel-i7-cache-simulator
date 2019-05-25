@@ -32,7 +32,7 @@ else
 endif
 
 # TODO DONT FORGET to put back   test-addr
-all::  test-cache test-commands test-memory test-tlb_simple test-tlb_hrchy test-addr
+all::  test-cache test-commands test-memory test-tlb_simple test-tlb_hrchy
 error.o: error.h error.c
 
 addr_mng.o: addr_mng.c addr_mng.h error.h addr.h

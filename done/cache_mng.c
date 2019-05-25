@@ -14,6 +14,11 @@
 #include <inttypes.h> // for PRIx macros
 
 //=========================================================================
+// Our macros
+
+
+
+//=========================================================================
 #define PRINT_CACHE_LINE(OUTFILE, TYPE, WAYS, LINE_INDEX, WAY, WORDS_PER_LINE) \
     do { \
             fprintf(OUTFILE, "V: %1" PRIx8 ", AGE: %1" PRIx8 ", TAG: 0x%03" PRIx16 ", values: ( ", \
@@ -116,7 +121,7 @@ int cache_entry_init(const void * mem_space,
 		}
 	} else if(cache_type ==  L2_CACHE) {
 		tag = phy_addr >> L2_CACHE_TAG_REMAINING_BITS;
-		printf("tag corresponding to : 0x%" PRIX32 "is : 0x%" PRIX32 "\n", phy_addr, tag);
+		printf("tag corresponding to : 0x%" PRIX32 "is : 0x%" PRIX32 "\n", phy_addr, tag); // TODO Remove
 		((l2_cache_entry_t*)cache_entry)->tag = tag;
 		((l2_cache_entry_t*)cache_entry)->age = (uint8_t) 0;
 		((l2_cache_entry_t*)cache_entry)->v = (uint8_t) 1;
@@ -135,15 +140,19 @@ int cache_flush(void *cache, cache_t cache_type) {
 	M_REQUIRE_NON_NULL(cache);
 	M_REQUIRE(cache_type == L1_ICACHE || cache_type == L1_DCACHE || cache_type == L2_CACHE,
 			  ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
+	
+	size_t cache_size;
 	if(cache_type == L1_ICACHE) {
-	 	memset(cache, 0, L1_ICACHE_LINES * sizeof(l1_icache_entry_t)); //still needa add ways or smthn? 
+		cache_size = L1_ICACHE_LINES * L1_ICACHE_WAYS * sizeof(l1_icache_entry_t);
+	 	//still needa add ways or smthn? @michael I think so. I did it
 	} else if(cache_type == L1_DCACHE) {
-			memset(cache, 0, L1_DCACHE_LINES * sizeof(l1_dcache_entry_t));
-	} else if(cache_type ==  L2_CACHE) {
-			memset(cache, 0, L2_CACHE_LINES * sizeof(l2_cache_entry_t));
-	} else {
-		return ERR_BAD_PARAMETER;
+		cache_size = L1_DCACHE_LINES * L1_DCACHE_WAYS * sizeof(l1_dcache_entry_t);
+
+	} else { // We already test for valid types at the top of function
+		cache_size = L2_CACHE_LINES * L2_CACHE_WAYS * sizeof(l2_cache_entry_t);
 	}
+
+	memset(cache, 0, cache_size);
 	return ERR_NONE;
 }
 
