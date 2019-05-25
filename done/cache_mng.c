@@ -85,75 +85,74 @@ int cache_entry_init(const void * mem_space,
                      void * cache_entry,
                      cache_t cache_type){
     M_REQUIRE_NON_NULL(mem_space);
-	M_REQUIRE_NON_NULL(paddr);
-	M_REQUIRE_NON_NULL(cache_entry);
-	M_REQUIRE(cache_type == L1_ICACHE || cache_type == L1_DCACHE || cache_type == L2_CACHE,
-			  ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
+    M_REQUIRE_NON_NULL(paddr);
+    M_REQUIRE_NON_NULL(cache_entry);
+    M_REQUIRE(cache_type == L1_ICACHE || cache_type == L1_DCACHE || cache_type == L2_CACHE,
+              ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
 
 
     uint32_t phy_addr = (paddr->phy_page_num << PAGE_OFFSET) | (paddr->page_offset); //TODO: macro or helper method for this
 
-	//uint32_t index;
-	//the tag must be shifted so as to remove the index in the virtual address
-	size_t i = 0;
-	uint32_t tag;
-	uint32_t alligned_phy_addr = phy_addr & 0xFFFFFFF0; //set 4 msb bits to 0 so that it is a multiple of 16
-	
-	
-	printf("phy_addr : 0x%" PRIX32 "\n", phy_addr);
-	const word_t* start = (const word_t*)mem_space + alligned_phy_addr/sizeof(word_t);
-	
-	if(cache_type == L1_ICACHE) {
-	 	tag = phy_addr >> L1_ICACHE_TAG_REMAINING_BITS;
-		((l1_icache_entry_t*)cache_entry)->tag = tag;
-		((l1_icache_entry_t*)cache_entry)->age = (uint8_t) 0;
-		((l1_icache_entry_t*)cache_entry)->v = (uint8_t) 1;
-		for(i = 0; i < 4; i++) {
-			((l1_icache_entry_t*)cache_entry)->line[i] = start[i];
-		}
-	} else if(cache_type == L1_DCACHE) {
-		tag = phy_addr >> L1_DCACHE_TAG_REMAINING_BITS;
-		((l1_dcache_entry_t*)cache_entry)->tag = tag;
-		((l1_dcache_entry_t*)cache_entry)->age = (uint8_t) 0;
-		((l1_dcache_entry_t*)cache_entry)->v = (uint8_t) 1;
-		for(i = 0; i < 4; i++) {
-			(((l1_dcache_entry_t*)cache_entry)->line)[i] = start[i];
-		}
-	} else if(cache_type ==  L2_CACHE) {
-		tag = phy_addr >> L2_CACHE_TAG_REMAINING_BITS;
-		printf("tag corresponding to : 0x%" PRIX32 "is : 0x%" PRIX32 "\n", phy_addr, tag); // TODO Remove
-		((l2_cache_entry_t*)cache_entry)->tag = tag;
-		((l2_cache_entry_t*)cache_entry)->age = (uint8_t) 0;
-		((l2_cache_entry_t*)cache_entry)->v = (uint8_t) 1;
-		for(i = 0; i < 4; i++) {
-			((l2_cache_entry_t*)cache_entry)->line[i] = start[i];
-		}
-	} else {
-		return ERR_BAD_PARAMETER;
-	}
+    //uint32_t index;
+    //the tag must be shifted so as to remove the index in the virtual address
+    size_t i = 0;
+    uint32_t tag;
+    uint32_t alligned_phy_addr = phy_addr & 0xFFFFFFF0; //set 4 msb bits to 0 so that it is a multiple of 16
+    
+    
+    printf("phy_addr : 0x%" PRIX32 "\n", phy_addr);
+    const word_t* start = (const word_t*)mem_space + alligned_phy_addr/sizeof(word_t);
+    
+    if(cache_type == L1_ICACHE) {
+         tag = phy_addr >> L1_ICACHE_TAG_REMAINING_BITS;
+        ((l1_icache_entry_t*)cache_entry)->tag = tag;
+        ((l1_icache_entry_t*)cache_entry)->age = (uint8_t) 0;
+        ((l1_icache_entry_t*)cache_entry)->v = (uint8_t) 1;
+        for(i = 0; i < 4; i++) { // TODO Probabably can be replaced with foreach_way(var, ways)
+            ((l1_icache_entry_t*)cache_entry)->line[i] = start[i];
+        }
+    } else if(cache_type == L1_DCACHE) {
+        tag = phy_addr >> L1_DCACHE_TAG_REMAINING_BITS;
+        ((l1_dcache_entry_t*)cache_entry)->tag = tag;
+        ((l1_dcache_entry_t*)cache_entry)->age = (uint8_t) 0;
+        ((l1_dcache_entry_t*)cache_entry)->v = (uint8_t) 1;
+        for(i = 0; i < 4; i++) {
+            (((l1_dcache_entry_t*)cache_entry)->line)[i] = start[i];
+        }
+    } else if(cache_type ==  L2_CACHE) {
+        tag = phy_addr >> L2_CACHE_TAG_REMAINING_BITS;
+        printf("tag corresponding to : 0x%" PRIX32 "is : 0x%" PRIX32 "\n", phy_addr, tag); // TODO Remove
+        ((l2_cache_entry_t*)cache_entry)->tag = tag;
+        ((l2_cache_entry_t*)cache_entry)->age = (uint8_t) 0;
+        ((l2_cache_entry_t*)cache_entry)->v = (uint8_t) 1;
+        for(i = 0; i < 4; i++) {
+            ((l2_cache_entry_t*)cache_entry)->line[i] = start[i];
+        }
+    } else {
+        return ERR_BAD_PARAMETER;
+    }
 
-	return ERR_NONE;
+    return ERR_NONE;
 }
 
 
 int cache_flush(void *cache, cache_t cache_type) {
-	M_REQUIRE_NON_NULL(cache);
-	M_REQUIRE(cache_type == L1_ICACHE || cache_type == L1_DCACHE || cache_type == L2_CACHE,
-			  ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
-	
-	size_t cache_size;
-	if(cache_type == L1_ICACHE) {
-		cache_size = L1_ICACHE_LINES * L1_ICACHE_WAYS * sizeof(l1_icache_entry_t);
-	 	//still needa add ways or smthn? @michael I think so. I did it
-	} else if(cache_type == L1_DCACHE) {
-		cache_size = L1_DCACHE_LINES * L1_DCACHE_WAYS * sizeof(l1_dcache_entry_t);
+    M_REQUIRE_NON_NULL(cache);
+    M_REQUIRE(cache_type == L1_ICACHE || cache_type == L1_DCACHE || cache_type == L2_CACHE,
+              ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
+    
+    size_t cache_size;
+    if(cache_type == L1_ICACHE) {
+        cache_size = L1_ICACHE_LINES * L1_ICACHE_WAYS * sizeof(l1_icache_entry_t);
+         //still needa add ways or smthn? @michael I think so. I did it
+    } else if(cache_type == L1_DCACHE) {
+        cache_size = L1_DCACHE_LINES * L1_DCACHE_WAYS * sizeof(l1_dcache_entry_t);
+    } else { // We already test for valid types at the top of function
+        cache_size = L2_CACHE_LINES * L2_CACHE_WAYS * sizeof(l2_cache_entry_t);
+    }
 
-	} else { // We already test for valid types at the top of function
-		cache_size = L2_CACHE_LINES * L2_CACHE_WAYS * sizeof(l2_cache_entry_t);
-	}
-
-	memset(cache, 0, cache_size);
-	return ERR_NONE;
+    memset(cache, 0, cache_size);
+    return ERR_NONE;
 }
 
 int cache_insert(uint16_t cache_line_index,
@@ -161,32 +160,32 @@ int cache_insert(uint16_t cache_line_index,
                  const void * cache_line_in,
                  void * cache,
                  cache_t cache_type) {
-	M_REQUIRE_NON_NULL(cache);
-	M_REQUIRE_NON_NULL(cache_line_in);
-	M_REQUIRE(cache_type == L1_ICACHE || cache_type == L1_DCACHE || cache_type == L2_CACHE,
-			  ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
-	
-	
-	//TODO CAN USE GIVEN MACROS FROM CACHE.H TO MAKE I NICER
-	int index_in_cache;
-	
-	if(cache_type == L1_ICACHE) {
-		index_in_cache = cache_line_index * L1_ICACHE_WAYS  + cache_way;
-		M_REQUIRE(index_in_cache < L1_ICACHE_LINES * L1_ICACHE_WAYS, ERR_BAD_PARAMETER, "%s", "index out of bounds");
-	 	//((l1_icache_entry_t*)cache)[index_in_cache] = *(l1_icache_entry_t*) cache_line_in;
-	 	//cache_entry(L1_ICACHE, L1_ICACHE_WAYS, cache_line_index, cache_way) = *(l1_icache_entry_t*) cache_line_in;
-	} else if(cache_type == L1_DCACHE) {
-		index_in_cache = cache_line_index * L1_DCACHE_WAYS  + cache_way;
-		M_REQUIRE(index_in_cache < L1_DCACHE_LINES * L1_DCACHE_WAYS, ERR_BAD_PARAMETER, "%s", "index out of bounds");
-		//cache_entry(L1_ICACHE, L1_DCACHE_WAYS, cache_line_index, cache_way) = *(l1_icache_entry_t*) cache_line_in;
-	} else if(cache_type ==  L2_CACHE) {
-		index_in_cache = cache_line_index * L2_CACHE_WAYS  + cache_way;
-		M_REQUIRE(index_in_cache < L2_CACHE_LINES * L2_CACHE_WAYS, ERR_BAD_PARAMETER, "%s", "index out of bounds");
-		//cache_entry(L1_ICACHE, L2_CACHE_WAYS, cache_line_index, cache_way) = *(l1_icache_entry_t*) cache_line_in;
-	} else {
-		return ERR_BAD_PARAMETER;
-	}
-	return ERR_NONE;
+    M_REQUIRE_NON_NULL(cache);
+    M_REQUIRE_NON_NULL(cache_line_in);
+    M_REQUIRE(cache_type == L1_ICACHE || cache_type == L1_DCACHE || cache_type == L2_CACHE,
+              ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
+    
+    
+    //TODO CAN USE GIVEN MACROS FROM CACHE.H TO MAKE I NICER
+    int index_in_cache;
+    
+    if(cache_type == L1_ICACHE) {
+        index_in_cache = cache_line_index * L1_ICACHE_WAYS  + cache_way;
+        M_REQUIRE(index_in_cache < L1_ICACHE_LINES * L1_ICACHE_WAYS, ERR_BAD_PARAMETER, "%s", "index out of bounds");
+         //((l1_icache_entry_t*)cache)[index_in_cache] = *(l1_icache_entry_t*) cache_line_in;
+         //cache_entry(L1_ICACHE, L1_ICACHE_WAYS, cache_line_index, cache_way) = *(l1_icache_entry_t*) cache_line_in;
+    } else if(cache_type == L1_DCACHE) {
+        index_in_cache = cache_line_index * L1_DCACHE_WAYS  + cache_way;
+        M_REQUIRE(index_in_cache < L1_DCACHE_LINES * L1_DCACHE_WAYS, ERR_BAD_PARAMETER, "%s", "index out of bounds");
+        //cache_entry(L1_ICACHE, L1_DCACHE_WAYS, cache_line_index, cache_way) = *(l1_icache_entry_t*) cache_line_in;
+    } else if(cache_type ==  L2_CACHE) {
+        index_in_cache = cache_line_index * L2_CACHE_WAYS  + cache_way;
+        M_REQUIRE(index_in_cache < L2_CACHE_LINES * L2_CACHE_WAYS, ERR_BAD_PARAMETER, "%s", "index out of bounds");
+        //cache_entry(L1_ICACHE, L2_CACHE_WAYS, cache_line_index, cache_way) = *(l1_icache_entry_t*) cache_line_in;
+    } else {
+        return ERR_BAD_PARAMETER;
+    }
+    return ERR_NONE;
 }
 
 
@@ -214,9 +213,9 @@ int cache_hit (const void * mem_space,
                uint8_t *hit_way,
                uint16_t *hit_index,
                cache_t cache_type) {
-				   //check in that line in every way, then return the hit index and the way
-				   //TODO:hit index ?
-	return ERR_NONE;
+                   //check in that line in every way, then return the hit index and the way
+                   //TODO:hit index ?
+    return ERR_NONE;
 }
 
 
@@ -250,8 +249,8 @@ int cache_read(const void * mem_space,
                void * l2_cache,
                uint32_t * word,
                cache_replace_t replace){
-				   return ERR_NONE;
-			   }
+                   return ERR_NONE;
+               }
 
 /**
  * @brief Write to cache a byte of data. Endianess: LITTLE.
@@ -270,10 +269,10 @@ int cache_write_byte(void * mem_space,
                      void * l2_cache,
                      uint8_t p_byte,
                      cache_replace_t replace){
-						 return ERR_NONE;
-					 }
-					 
-					 /**
+                         return ERR_NONE;
+                     }
+                     
+                     /**
  * @brief Change a word of data in the cache.
  *  Exclusive policy (see cache_read)
  *
@@ -291,12 +290,12 @@ int cache_write(void * mem_space,
                 void * l2_cache,
                 const uint32_t * word,
                 cache_replace_t replace){
-					return ERR_NONE;
-				}
-				
-				
-				
-				/**
+                    return ERR_NONE;
+                }
+                
+                
+                
+                /**
  * @brief Ask cache for a byte of data. Endianess: LITTLE.
  *
  * @param mem_space pointer to the memory space
@@ -315,7 +314,7 @@ int cache_read_byte(const void * mem_space,
                     void * l2_cache,
                     uint8_t * p_byte,
                     cache_replace_t replace){
-						return ERR_NONE;
-					}
+                        return ERR_NONE;
+                    }
 
 
