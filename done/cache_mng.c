@@ -128,7 +128,7 @@ int cache_entry_init(const void * mem_space,
     const word_t* start = (const word_t*)mem_space + alligned_phy_addr/sizeof(word_t);
     
     if(cache_type == L1_ICACHE) {
-         tag = phy_addr >> L1_ICACHE_TAG_REMAINING_BITS;
+        tag = phy_addr >> L1_ICACHE_TAG_REMAINING_BITS;
         ((l1_icache_entry_t*)cache_entry)->tag = tag;
         ((l1_icache_entry_t*)cache_entry)->age = (uint8_t) 0;
         ((l1_icache_entry_t*)cache_entry)->v = (uint8_t) 1;
@@ -196,6 +196,7 @@ int cache_insert(uint16_t cache_line_index,
 
     M_EXPAND_ALL_CACHE_TYPES(M_CACHE_INSERT)
     return ERR_NONE;
+    #undef M_CACHE_INSERT
 }
 
 
@@ -232,7 +233,33 @@ int cache_hit (const void * mem_space,
     M_REQUIRE(cache_type == L1_ICACHE || cache_type == L1_DCACHE || cache_type == L2_CACHE,
               ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
 
+    uint32_t phy_addr = get_addr(paddr);
+    uint32_t line_index;
+    uint32_t tag;
 
+    uint8_t hit = 0;
+
+    // TODO Use macro do treat all 3 types
+    line_index = (phy_addr / L1_ICACHE_LINE) % L1_ICACHE_LINES;
+    tag = phy_addr >> L1_ICACHE_TAG_REMAINING_BITS;
+
+    foreach_way(i, L1_ICACHE_WAYS) {
+        l1_icache_entry_t* cache_entry = cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, line_index, i);
+        if (cache_entry->v && cache_entry->tag == tag) {
+            hit = 1;
+            *hit_way = i;
+            *hit_index = line_index;
+            *p_line = cache_entry->line;
+            // TODO update age
+
+            return ERR_NONE; // break;
+        }
+    }
+
+    if (!hit) { // TODO Maybe `hit` is not needed
+        *hit_way = HIT_WAY_MISS;
+        *hit_index = HIT_INDEX_MISS;
+    }
 
     return ERR_NONE;
 }
