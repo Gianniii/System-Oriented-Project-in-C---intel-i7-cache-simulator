@@ -37,10 +37,43 @@
 	}
 
 //=========================================================================
-// Helper methods
+// Helper functions
 
+/**
+ * @brief TODO
+ */
 static inline uint32_t get_addr(const phy_addr_t * paddr) {
     return (paddr->phy_page_num << PAGE_OFFSET) | (paddr->page_offset);
+}
+
+/** TODO This function is probably way too complex. Replace with a macro idk
+ * @brief Looks for an empty way in the cache at the given line.
+ * 
+ * @param cache the cache
+ * @param cache_type its type
+ * @param cache_line_index the index
+ * 
+ * @return the index of the 1st empty way that was found. Otherwise, returns -1 
+ */
+static inline uint8_t find_empty_way(void * cache, cache_t cache_type, uint16_t cache_line_index) {
+    // TODO Remove this later. I left it to better understand the macro
+    // foreach_way(i, L1_ICACHE_WAYS) {
+    //     if (!cache_valid(M_CACHE_ENTRY_T(L1_ICACHE), L1_ICACHE_WAYS, cache_line_index, i)) {
+    //         return i;
+    //     }
+    // }
+    
+    #define M_FIND_EMPTY_WAY(m_cache_type) \
+        foreach_way(i, m_cache_type ## _WAYS) { \
+            if (!cache_valid(M_CACHE_ENTRY_T(m_cache_type), m_cache_type ## _WAYS, cache_line_index, i)) { \
+                return i; \
+            } \
+        }
+
+    M_EXPAND_ALL_CACHE_TYPES(M_FIND_EMPTY_WAY)
+
+    return -1;
+    #undef M_find_empty_way
 }
 
 //=========================================================================
@@ -108,7 +141,7 @@ int cache_dump(FILE* output, const void* cache, cache_t cache_type)
 int cache_entry_init(const void * mem_space,
                      const phy_addr_t * paddr,
                      void * cache_entry,
-                     cache_t cache_type){
+                     cache_t cache_type) {
     M_REQUIRE_NON_NULL(mem_space);
     M_REQUIRE_NON_NULL(paddr);
     M_REQUIRE_NON_NULL(cache_entry);
@@ -221,7 +254,7 @@ int cache_insert(uint16_t cache_line_index,
 int cache_hit (const void * mem_space,
                void * cache,
                phy_addr_t * paddr,
-               const uint32_t ** p_line,
+               const uint32_t ** p_line, // TODO ask why is this a double pointer?
                uint8_t *hit_way,
                uint16_t *hit_index,
                cache_t cache_type) {
@@ -240,24 +273,24 @@ int cache_hit (const void * mem_space,
 
     uint8_t hit = 0;
 
-    // TODO Use macro do treat all 3 types
-    line_index = (phy_addr / L1_ICACHE_LINE) % L1_ICACHE_LINES;
-    tag = phy_addr >> L1_ICACHE_TAG_REMAINING_BITS;
+    if (cache_type == L1_ICACHE) {
+        line_index = (phy_addr / L1_ICACHE_LINE) % L1_ICACHE_LINES;
+        tag = phy_addr >> L1_ICACHE_TAG_REMAINING_BITS;
 
-    foreach_way(i, L1_ICACHE_WAYS) {
-        l1_icache_entry_t* cache_entry = cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, line_index, i);
-        if (cache_entry->v && cache_entry->tag == tag) {
-            hit = 1;
-            *hit_way = i;
-            *hit_index = line_index;
-            *p_line = cache_entry->line;
-            // TODO update age
+        foreach_way(i, L1_ICACHE_WAYS) {
+            l1_icache_entry_t* cache_entry = cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, line_index, i);
+            if (cache_entry->v && cache_entry->tag == tag) {
+                hit = 1;
+                *hit_way = i;
+                *hit_index = line_index;
+                *p_line = cache_entry->line;
+                
+                LRU_age_update(l1_icache_entry_t, L1_ICACHE_WAYS, i, line_index) // TODO check me
 
-            LRU_age_increase(l1_icache_entry_t, L1_ICACHE_WAYS, 1, line_index)
-
-            return ERR_NONE; // break;
+                return ERR_NONE; // break;
+            }
         }
-    }
+    } else {} // TODO Use macro to treat all 3 types
 
     if (!hit) { // TODO Maybe `hit` is not needed
         *hit_way = HIT_WAY_MISS;
@@ -297,9 +330,50 @@ int cache_read(const void * mem_space,
                void * l1_cache,
                void * l2_cache,
                uint32_t * word,
-               cache_replace_t replace){
-                   return ERR_NONE;
-               }
+               cache_replace_t replace) {
+    M_REQUIRE_NON_NULL(mem_space);
+    M_REQUIRE_NON_NULL(paddr);
+    M_REQUIRE_NON_NULL(l1_cache);
+    M_REQUIRE_NON_NULL(l2_cache);
+    M_REQUIRE_NON_NULL(word);
+    M_REQUIRE(access == INSTRUCTION || access == DATA, ERR_BAD_PARAMETER, "%s", "Non existing access type");
+    M_REQUIRE(replace == LRU, ERR_BAD_PARAMETER, "%s", "Non existing replacement policy");
+
+    // TODO add address verification
+
+    uint8_t hit_way;
+    uint16_t hit_index;
+    const uint32_t* temp_word;
+
+    // *** Searching Level 1 Cache ***
+    if (access == INSTRUCTION) {
+        // TODO How to correctly assign word? and do we need to update age?
+        cache_hit(mem_space, l1_cache, paddr, &temp_word, &hit_way, &hit_index, L1_ICACHE); // TODO Handle error
+        if (hit_way != HIT_WAY_MISS) {
+            *word = *temp_word;
+            return ERR_NONE;
+        }
+    } else {
+        // same as for INSTRUCTION
+    }
+
+    // *** L1 Miss - Searching Level 2 Cache ***
+
+    cache_hit(mem_space, l2_cache, paddr, &temp_word, &hit_way, &hit_index, L2_CACHE); // TODO Handle error
+    if (hit_way != HIT_WAY_MISS) {
+        // TODO Transfer l2_entry to l1
+
+        *word = *temp_word;
+        return ERR_NONE;
+    }
+
+    // *** L2 Miss - Searching Memory
+    void* cache_e = malloc(sizeof(l1_icache_entry_t)); // TODO Handle error
+    cache_entry_init(mem_space, paddr, cache_e, (access == INSTRUCTION ? L1_ICACHE : L1_DCACHE)); // TODO Handle error
+    // cache_insert()
+
+    return ERR_NONE;
+    }
 
 /**
  * @brief Write to cache a byte of data. Endianess: LITTLE.
