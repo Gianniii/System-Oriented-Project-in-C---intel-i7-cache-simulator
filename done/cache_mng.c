@@ -11,6 +11,7 @@
 #include "cache_mng.h"
 #include "lru.h"
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <inttypes.h> // for PRIx macros
 
@@ -152,13 +153,11 @@ int cache_entry_init(const void * mem_space,
     uint32_t phy_addr = get_addr(paddr);
 
     //uint32_t index;
-    //the tag must be shifted so as to remove the index in the virtual address
     size_t i = 0;
     uint32_t tag;
     uint32_t alligned_phy_addr = phy_addr & 0xFFFFFFF0; //set 4 msb bits to 0 so that it is a multiple of 16
     
-    
-    printf("phy_addr : 0x%" PRIX32 "\n", phy_addr);
+
     const word_t* start = (const word_t*)mem_space + alligned_phy_addr/sizeof(word_t);
     
     if(cache_type == L1_ICACHE) {
@@ -179,7 +178,6 @@ int cache_entry_init(const void * mem_space,
         }
     } else if(cache_type ==  L2_CACHE) {
         tag = phy_addr >> L2_CACHE_TAG_REMAINING_BITS;
-        printf("tag corresponding to : 0x%" PRIX32 "is : 0x%" PRIX32 "\n", phy_addr, tag); // TODO Remove
         ((l2_cache_entry_t*)cache_entry)->tag = tag;
         ((l2_cache_entry_t*)cache_entry)->age = (uint8_t) 0;
         ((l2_cache_entry_t*)cache_entry)->v = (uint8_t) 1;
@@ -202,10 +200,9 @@ int cache_flush(void *cache, cache_t cache_type) {
     size_t cache_size;
     if(cache_type == L1_ICACHE) {
         cache_size = L1_ICACHE_LINES * L1_ICACHE_WAYS * sizeof(l1_icache_entry_t);
-         //still needa add ways or smthn? @michael I think so. I did it
     } else if(cache_type == L1_DCACHE) {
         cache_size = L1_DCACHE_LINES * L1_DCACHE_WAYS * sizeof(l1_dcache_entry_t);
-    } else { // We already test for valid types at the top of function
+    } else {
         cache_size = L2_CACHE_LINES * L2_CACHE_WAYS * sizeof(l2_cache_entry_t);
     }
 
@@ -254,11 +251,11 @@ int cache_insert(uint16_t cache_line_index,
 int cache_hit (const void * mem_space,
                void * cache,
                phy_addr_t * paddr,
-               const uint32_t ** p_line, // TODO ask why is this a double pointer?
+               const uint32_t ** p_line, // TODO ask why is this a double pointer? reply: i think its because cache_entry->line is a pointer
                uint8_t *hit_way,
                uint16_t *hit_index,
                cache_t cache_type) {
-    M_REQUIRE_NON_NULL(mem_space);
+    //M_REQUIRE_NON_NULL(mem_space); //memspace is unused here
     M_REQUIRE_NON_NULL(cache);
     M_REQUIRE_NON_NULL(paddr);
     M_REQUIRE_NON_NULL(p_line);
@@ -272,7 +269,8 @@ int cache_hit (const void * mem_space,
     uint32_t tag;
 
     uint8_t hit = 0;
-
+    
+     // TODO Use macro to treat all 3 types
     if (cache_type == L1_ICACHE) {
         line_index = (phy_addr / L1_ICACHE_LINE) % L1_ICACHE_LINES;
         tag = phy_addr >> L1_ICACHE_TAG_REMAINING_BITS;
@@ -290,7 +288,41 @@ int cache_hit (const void * mem_space,
                 return ERR_NONE; // break;
             }
         }
-    } else {} // TODO Use macro to treat all 3 types
+    } else if(cache_type == L1_DCACHE) {
+		 line_index = (phy_addr / L1_DCACHE_LINE) % L1_DCACHE_LINES;
+        tag = phy_addr >> L1_DCACHE_TAG_REMAINING_BITS;
+
+        foreach_way(i, L1_ICACHE_WAYS) {
+            l1_dcache_entry_t* cache_entry = cache_entry(l1_dcache_entry_t, L1_DCACHE_WAYS, line_index, i);
+            if (cache_entry->v && cache_entry->tag == tag) {
+                hit = 1;
+                *hit_way = i;
+                *hit_index = line_index;
+                *p_line = cache_entry->line;
+                
+                LRU_age_update(l1_icache_entry_t, L1_DCACHE_WAYS, i, line_index) // TODO check me
+
+                return ERR_NONE; // break;
+            }
+        }
+	} else if(cache_type == L2_CACHE) {
+		line_index = (phy_addr / L2_CACHE_LINE) % L2_CACHE_LINES;
+        tag = phy_addr >> L2_CACHE_TAG_REMAINING_BITS;
+
+        foreach_way(i, L2_CACHE_WAYS) {
+            l2_cache_entry_t* cache_entry = cache_entry(l2_cache_entry_t, L2_CACHE_WAYS, line_index, i);
+            if (cache_entry->v && cache_entry->tag == tag) {
+                hit = 1;
+                *hit_way = i;
+                *hit_index = line_index;
+                *p_line = cache_entry->line;
+                
+                LRU_age_update(l2_cache_entry_t, L2_CACHE_WAYS, i, line_index) // TODO check me
+
+                return ERR_NONE; // break;
+            }
+        }
+	}
 
     if (!hit) { // TODO Maybe `hit` is not needed
         *hit_way = HIT_WAY_MISS;
@@ -339,37 +371,47 @@ int cache_read(const void * mem_space,
     M_REQUIRE(access == INSTRUCTION || access == DATA, ERR_BAD_PARAMETER, "%s", "Non existing access type");
     M_REQUIRE(replace == LRU, ERR_BAD_PARAMETER, "%s", "Non existing replacement policy");
 
+printf("call to read \n");
     // TODO add address verification
-
+	
     uint8_t hit_way;
     uint16_t hit_index;
-    const uint32_t* temp_word;
+    const uint32_t* p_line;
+    uint32_t phy_addr = get_addr(paddr);
+    
 
     // *** Searching Level 1 Cache ***
     if (access == INSTRUCTION) {
-        // TODO How to correctly assign word? and do we need to update age?
-        cache_hit(mem_space, l1_cache, paddr, &temp_word, &hit_way, &hit_index, L1_ICACHE); // TODO Handle error
-        if (hit_way != HIT_WAY_MISS) {
-            *word = *temp_word;
+        // TODO How to correctly assign word? and do we need to update age? reply: i think because hit updates age on its own so we dont need to
+        cache_hit(mem_space, l1_cache, paddr, &p_line, &hit_way, &hit_index, L1_ICACHE); // TODO Handle error
+        printf("hit_way instr : 0x%" PRIX8 "\n", hit_way);
+        if (hit_way != HIT_WAY_MISS) { //for some reason we get a miss when it should be a hit ?? 
+            *word = p_line[phy_addr % L1_ICACHE_WORDS_PER_LINE]; //get correct word in line
             return ERR_NONE;
         }
-    } else {
-        // same as for INSTRUCTION
+
+    } else if (access == DATA) {
+        cache_hit(mem_space, l1_cache, paddr, &p_line, &hit_way, &hit_index, L1_DCACHE); // TODO Handle error
+        printf("hit_way data: 0x%" PRIX8 "\n", hit_way); //for some reason we get miss =/
+        if (hit_way != HIT_WAY_MISS) {
+            *word = p_line[phy_addr % L1_DCACHE_WORDS_PER_LINE];
+            return ERR_NONE;
+        }
     }
 
     // *** L1 Miss - Searching Level 2 Cache ***
 
-    cache_hit(mem_space, l2_cache, paddr, &temp_word, &hit_way, &hit_index, L2_CACHE); // TODO Handle error
+    //cache_hit(mem_space, l2_cache, paddr, &p_line, &hit_way, &hit_index, L2_CACHE); // TODO Handle error
     if (hit_way != HIT_WAY_MISS) {
         // TODO Transfer l2_entry to l1
 
-        *word = *temp_word;
+        //word = *temp_word;
         return ERR_NONE;
     }
 
     // *** L2 Miss - Searching Memory
-    void* cache_e = malloc(sizeof(l1_icache_entry_t)); // TODO Handle error
-    cache_entry_init(mem_space, paddr, cache_e, (access == INSTRUCTION ? L1_ICACHE : L1_DCACHE)); // TODO Handle error
+   // void* cache_e = malloc(sizeof(l1_icache_entry_t)); // TODO Handle error dont think we need to malloc, we just replace the correct word in already existing entry 
+    //cache_entry_init(mem_space, paddr, cache_e, (access == INSTRUCTION ? L1_ICACHE : L1_DCACHE)); // TODO Handle error
     // cache_insert()
 
     return ERR_NONE;
