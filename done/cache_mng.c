@@ -384,15 +384,15 @@ printf("call to read \n");
     if (access == INSTRUCTION) {
         // TODO How to correctly assign word? and do we need to update age? reply: i think because hit updates age on its own so we dont need to
         cache_hit(mem_space, l1_cache, paddr, &p_line, &hit_way, &hit_index, L1_ICACHE); // TODO Handle error
-        printf("hit_way instr : 0x%" PRIX8 "\n", hit_way);
-        if (hit_way != HIT_WAY_MISS) { //for some reason we get a miss when it should be a hit ?? 
+       // printf("hit_way instr : 0x%" PRIX8 "\n", hit_way);
+        if (hit_way != HIT_WAY_MISS) { 
             *word = p_line[phy_addr % L1_ICACHE_WORDS_PER_LINE]; //get correct word in line
             return ERR_NONE;
         }
 
     } else if (access == DATA) {
         cache_hit(mem_space, l1_cache, paddr, &p_line, &hit_way, &hit_index, L1_DCACHE); // TODO Handle error
-        printf("hit_way data: 0x%" PRIX8 "\n", hit_way); //for some reason we get miss =/
+        //printf("hit_way data: 0x%" PRIX8 "\n", hit_way); 
         if (hit_way != HIT_WAY_MISS) {
             *word = p_line[phy_addr % L1_DCACHE_WORDS_PER_LINE];
             return ERR_NONE;
