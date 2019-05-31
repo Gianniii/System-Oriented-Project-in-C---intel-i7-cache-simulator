@@ -384,7 +384,6 @@ printf("call to read \n");
     if (access == INSTRUCTION) {
         // TODO How to correctly assign word? and do we need to update age? reply: i think because hit updates age on its own so we dont need to
         cache_hit(mem_space, l1_cache, paddr, &p_line, &hit_way, &hit_index, L1_ICACHE); // TODO Handle error
-       // printf("hit_way instr : 0x%" PRIX8 "\n", hit_way);
         if (hit_way != HIT_WAY_MISS) { 
             *word = p_line[phy_addr % L1_ICACHE_WORDS_PER_LINE]; //get correct word in line
             return ERR_NONE;
@@ -401,16 +400,42 @@ printf("call to read \n");
 
     // *** L1 Miss - Searching Level 2 Cache ***
 
-    //cache_hit(mem_space, l2_cache, paddr, &p_line, &hit_way, &hit_index, L2_CACHE); // TODO Handle error
+    cache_hit(mem_space, l2_cache, paddr, &p_line, &hit_way, &hit_index, L2_CACHE); // TODO Handle error
     if (hit_way != HIT_WAY_MISS) {
         // TODO Transfer l2_entry to l1
+        /**• assigner les informations de ligne de la l2_cache_entry_t vers la
+l1_...cache_entry_t ;**/  //je suis pas sur ce que ca veux dire ca ??? quel l1_...cache_entry ?? 
 
-        //word = *temp_word;
+		uint32_t tagInL1 = phy_addr >> L1_ICACHE_TAG_REMAINING_BITS; //new tag for level1 cache but what is it for ? 
+		uint32_t l1_line_index = (phy_addr / L1_ICACHE_LINE) % L1_ICACHE_LINES; //get line index in lvl1 cache
+		//checkl if available spot in l1_cache
+		if(access == INSTRUCTION) {
+			
+		} //same for DATA 
+		
+		
+		//invalider entrée dans l2 cache
+		cache_valid(L2_CACHE, L2_CACHE_WAYS, hit_index, hit_way) = 0;
+		
+		//check if space in l1_cache and insert if there is 
+		if(access == INSTRUCTION) {
+			foreach_way(i, L1_ICACHE_WAYS) {
+				if(cache_valid(L2_CACHE, L2_CACHE_WAYS, hit_index, i) == 0) {
+					cache_insert(l1_line_index, i, p_line, l1_cache, L1_ICACHE);
+					
+					LRU_age_increase(L1_ICACHE, L1_ICACHE_WAYS, i, l1_line_index);
+				}
+			}
+		} //same for DATA 
+		
+		
+		
+        *word = p_line[phy_addr % L2_CACHE_WORDS_PER_LINE];
         return ERR_NONE;
     }
 
     // *** L2 Miss - Searching Memory
-   // void* cache_e = malloc(sizeof(l1_icache_entry_t)); // TODO Handle error dont think we need to malloc, we just replace the correct word in already existing entry 
+   // void* cache_e = malloc(sizeof(l1_icache_entry_t)); // TODO Handle error dont think we need to malloc
     //cache_entry_init(mem_space, paddr, cache_e, (access == INSTRUCTION ? L1_ICACHE : L1_DCACHE)); // TODO Handle error
     // cache_insert()
 
