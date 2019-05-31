@@ -36,7 +36,6 @@
 	} else { \
 		MACRO(L2_CACHE); \
 	}
-
 //=========================================================================
 // Helper functions
 
@@ -251,7 +250,7 @@ int cache_insert(uint16_t cache_line_index,
 int cache_hit (const void * mem_space,
                void * cache,
                phy_addr_t * paddr,
-               const uint32_t ** p_line, // TODO ask why is this a double pointer? reply: i think its because cache_entry->line is a pointer
+               const uint32_t ** p_line, // TODO ask why is this a double pointer? reply: i think its because cache_entry->line is a pointer,
                uint8_t *hit_way,
                uint16_t *hit_index,
                cache_t cache_type) {
@@ -391,7 +390,6 @@ printf("call to read \n");
 
     } else if (access == DATA) {
         cache_hit(mem_space, l1_cache, paddr, &p_line, &hit_way, &hit_index, L1_DCACHE); // TODO Handle error
-        //printf("hit_way data: 0x%" PRIX8 "\n", hit_way); 
         if (hit_way != HIT_WAY_MISS) {
             *word = p_line[phy_addr % L1_DCACHE_WORDS_PER_LINE];
             return ERR_NONE;
@@ -415,15 +413,21 @@ l1_...cache_entry_t ;**/  //je suis pas sur ce que ca veux dire ca ??? quel l1_.
 		
 		
 		//invalider entrée dans l2 cache
-		cache_valid(L2_CACHE, L2_CACHE_WAYS, hit_index, hit_way) = 0;
+		void* cache = l2_cache; //for the macro
+		cache_valid(l2_cache_entry_t, L2_CACHE_WAYS, hit_index, hit_way) = 0;
 		
 		//check if space in l1_cache and insert if there is 
 		if(access == INSTRUCTION) {
 			foreach_way(i, L1_ICACHE_WAYS) {
-				if(cache_valid(L2_CACHE, L2_CACHE_WAYS, hit_index, i) == 0) {
-					cache_insert(l1_line_index, i, p_line, l1_cache, L1_ICACHE);
-					
-					LRU_age_increase(L1_ICACHE, L1_ICACHE_WAYS, i, l1_line_index);
+				if(cache_valid(l2_cache_entry_t, L2_CACHE_WAYS, hit_index, i) == 0) {
+					//tryint to make new entry to insert but cant assign the p_line to it =/
+					l1_icache_entry_t new_line;
+					cache_entry_init(mem_space, paddr, &new_line,(access == INSTRUCTION ? L1_ICACHE : L1_DCACHE));
+					//new_line.line = p_line; //ok so i cant do this since array type. should i copy the words into the array of my newline ? 
+					cache_insert(l1_line_index, i, &new_line, l1_cache, L1_ICACHE);
+					cache = l1_cache; //for the macro
+					LRU_age_increase(l1_icache_entry_t, L1_ICACHE_WAYS, i, l1_line_index);
+					//if we inserted it once we should exit the loop
 				}
 			}
 		} //same for DATA 
@@ -435,7 +439,7 @@ l1_...cache_entry_t ;**/  //je suis pas sur ce que ca veux dire ca ??? quel l1_.
     }
 
     // *** L2 Miss - Searching Memory
-   // void* cache_e = malloc(sizeof(l1_icache_entry_t)); // TODO Handle error dont think we need to malloc
+   // void* cache_e = malloc(sizeof(l1_icache_entry_t)); // TODO Handle error dont think we need to malloc comment: not sure if malloc is necessary i think insert makes a copy of it
     //cache_entry_init(mem_space, paddr, cache_e, (access == INSTRUCTION ? L1_ICACHE : L1_DCACHE)); // TODO Handle error
     // cache_insert()
 
