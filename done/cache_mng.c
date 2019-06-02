@@ -418,7 +418,7 @@ int cache_read(const void * mem_space,
     M_REQUIRE(replace == LRU, ERR_BAD_PARAMETER, "%s", "Non existing replacement policy");
 
     // TODO add address verification
-	
+
     uint8_t hit_way;
     uint16_t hit_index;
     const uint32_t* p_line;
@@ -428,27 +428,26 @@ int cache_read(const void * mem_space,
     uint16_t l1_cache_line_index = extract_l1_line_select(phy_addr);
     uint16_t l2_cache_line_index = extract_l2_line_select(phy_addr);
 
-    // *** Searching Level 1 Cache ***
-    if (access == INSTRUCTION) {
-        // TODO How to correctly assign word? and do we need to update age? reply: i think because hit updates age on its own so we dont need to
-        cache_hit(mem_space, l1_cache, paddr, &p_line, &hit_way, &hit_index, L1_ICACHE); // TODO Handle error
-        if (hit_way != HIT_WAY_MISS) { 
-            *word = p_line[extract_word_select(phy_addr)];
-            return ERR_NONE;
-        }
+    debug_print("%s", "============ cache_read() ============");
 
-    } else if (access == DATA) {
-        cache_hit(mem_space, l1_cache, paddr, &p_line, &hit_way, &hit_index, L1_DCACHE); // TODO Handle error
+    // *** Searching Level 1 Cache ***
+    debug_print("%s", "Searching Level 1 Cache");
+    if (1) { // access == INSTRUCTION
+        cache_hit(mem_space, l1_cache, paddr, &p_line, &hit_way, &hit_index, L1_ICACHE); // TODO Handle error
         if (hit_way != HIT_WAY_MISS) {
             *word = p_line[extract_word_select(phy_addr)];
+            debug_print("%s", "L1 Hit! - return ...");
             return ERR_NONE;
         }
     }
 
     // *** L1 Miss - Searching Level 2 Cache ***
+    debug_print("%s", "L1 Miss - Searching Level 2 Cache");
+
     l1_icache_entry_t l1_new_entry;
     cache_hit(mem_space, l2_cache, paddr, &p_line, &hit_way, &hit_index, L2_CACHE); // TODO Handle error
     if (hit_way != HIT_WAY_MISS) {
+        debug_print("%s", "L2 Hit!");
         if (1) { // access == INSTRUCTION
             // *** Create new l1_cache_entry ***
             l1_new_entry.v = 1;
@@ -462,13 +461,15 @@ int cache_read(const void * mem_space,
         } else {} //TODO DATA
     } else {
         // *** L2 Miss - Searching Memory
+        debug_print("%s", "L2 Miss - Searching Memory");
         cache_entry_init(mem_space, paddr, &l1_new_entry, L1_ICACHE); // TODO Handle error
     }
 
     // Inserting new_entry
+    debug_print("%s", "Inserting new_entry");
     uint8_t cold_start;
     uint8_t empty_way;
-    int err = find_or_make_empty_way(l1_cache, L1_ICACHE, l2_cache, l1_cache_line_index, l2_cache_line_index, replace, &empty_way, &cold_start);
+    int err = find_or_make_empty_way(l1_cache, L1_ICACHE, l2_cache, l1_cache_line_index, l2_cache_line_index, replace, &cold_start, &empty_way);
 
     void * cache = l1_cache;
     cache_insert(l1_cache_line_index, empty_way, &l1_new_entry, l1_cache, L1_ICACHE); // TODO Handle error
