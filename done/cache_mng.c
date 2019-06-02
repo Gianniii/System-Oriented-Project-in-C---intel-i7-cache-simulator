@@ -220,7 +220,8 @@ int cache_insert(uint16_t cache_line_index,
               ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
 
     #define M_CACHE_INSERT(m_cache_type) \
-        M_REQUIRE(cache_line_index <= m_cache_type ## _LINES, ERR_BAD_PARAMETER, "%s", "cache_line_index out of bounds"); \
+        M_REQUIRE(cache_line_index < m_cache_type ## _LINES, ERR_BAD_PARAMETER, "%s", "cache_line_index out of bounds"); \
+        M_REQUIRE(cache_way < m_cache_type ## _WAYS, "%s", "cache_way out of bounds"); \
         M_CACHE_ENTRY_T(m_cache_type)* cache_line = cache_entry(M_CACHE_ENTRY_T(m_cache_type), m_cache_type ## _WAYS, cache_line_index, cache_way); \
         *cache_line = *((M_CACHE_ENTRY_T(m_cache_type)*) cache_line_in); \
 
@@ -288,7 +289,7 @@ int cache_hit (const void * mem_space,
             }
         }
     } else if(cache_type == L1_DCACHE) {
-		 line_index = (phy_addr / L1_DCACHE_LINE) % L1_DCACHE_LINES;
+		line_index = (phy_addr / L1_DCACHE_LINE) % L1_DCACHE_LINES;
         tag = phy_addr >> L1_DCACHE_TAG_REMAINING_BITS;
 
         foreach_way(i, L1_ICACHE_WAYS) {
