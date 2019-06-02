@@ -445,52 +445,10 @@ l1_...cache_entry_t ;**/  //je suis pas sur ce que ca veux dire ca ??? quel l1_.
     // cache_insert()
 
     return ERR_NONE;
-    }
+}
+
 
 /**
- * @brief Write to cache a byte of data. Endianess: LITTLE.
- *
- * @param mem_space pointer to the memory space
- * @param paddr pointer to a physical address
- * @param l1_cache pointer to the beginning of L1 ICACHE
- * @param l2_cache pointer to the beginning of L2 CACHE
- * @param p_byte pointer to the byte to be returned
- * @param replace replacement policy
- * @return error code
- */
-int cache_write_byte(void * mem_space,
-                     phy_addr_t * paddr,
-                     void * l1_cache,
-                     void * l2_cache,
-                     uint8_t p_byte,
-                     cache_replace_t replace){
-                         return ERR_NONE;
-                     }
-                     
-                     /**
- * @brief Change a word of data in the cache.
- *  Exclusive policy (see cache_read)
- *
- * @param mem_space pointer to the memory space
- * @param paddr pointer to a physical address
- * @param l1_cache pointer to the beginning of L1 CACHE
- * @param l2_cache pointer to the beginning of L2 CACHE
- * @param word const pointer to the word of data that is to be written to the cache
- * @param replace replacement policy
- * @return error code
- */
-int cache_write(void * mem_space,
-                phy_addr_t * paddr,
-                void * l1_cache,
-                void * l2_cache,
-                const uint32_t * word,
-                cache_replace_t replace){
-                    return ERR_NONE;
-                }
-                
-                
-                
-                /**
  * @brief Ask cache for a byte of data. Endianess: LITTLE.
  *
  * @param mem_space pointer to the memory space
@@ -508,8 +466,55 @@ int cache_read_byte(const void * mem_space,
                     void * l1_cache,
                     void * l2_cache,
                     uint8_t * p_byte,
-                    cache_replace_t replace){
-                        return ERR_NONE;
-                    }
+                    cache_replace_t replace) {
+    return ERR_NONE;
+}
 
 
+/**
+ * @brief Change a word of data in the cache.
+ *  Exclusive policy (see cache_read)
+ *
+ * @param mem_space pointer to the memory space
+ * @param paddr pointer to a physical address
+ * @param l1_cache pointer to the beginning of L1 CACHE
+ * @param l2_cache pointer to the beginning of L2 CACHE
+ * @param word const pointer to the word of data that is to be written to the cache
+ * @param replace replacement policy
+ * @return error code
+ */
+int cache_write(void * mem_space,
+                phy_addr_t * paddr,
+                void * l1_cache,
+                void * l2_cache,
+                const uint32_t * word,
+                cache_replace_t replace) {
+
+    M_REQUIRE_NON_NULL(mem_space);
+    M_REQUIRE_NON_NULL(paddr);
+    M_REQUIRE_NON_NULL(l1_cache);
+    M_REQUIRE_NON_NULL(l2_cache);    
+
+    return ERR_NONE;
+}
+
+
+/**
+ * @brief Write to cache a byte of data. Endianess: LITTLE.
+ *
+ * @param mem_space pointer to the memory space
+ * @param paddr pointer to a physical address
+ * @param l1_cache pointer to the beginning of L1 ICACHE
+ * @param l2_cache pointer to the beginning of L2 CACHE
+ * @param p_byte pointer to the byte to be returned
+ * @param replace replacement policy
+ * @return error code
+ */
+int cache_write_byte(void * mem_space,
+                     phy_addr_t * paddr,
+                     void * l1_cache,
+                     void * l2_cache,
+                     uint8_t p_byte,
+                     cache_replace_t replace) {
+    return ERR_NONE;
+}               
