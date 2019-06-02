@@ -608,6 +608,21 @@ int cache_read_byte(const void * mem_space,
                     void * l2_cache,
                     uint8_t * p_byte,
                     cache_replace_t replace) {
+    M_REQUIRE_NON_NULL(mem_space);
+    M_REQUIRE_NON_NULL(p_paddr);
+    M_REQUIRE_NON_NULL(l1_cache);
+    M_REQUIRE_NON_NULL(l2_cache);
+    M_REQUIRE_NON_NULL(p_byte);
+    M_REQUIRE(access == INSTRUCTION || access == DATA, ERR_BAD_PARAMETER, "%s", "Non existing access type");
+    M_REQUIRE(replace == LRU, ERR_BAD_PARAMETER, "%s", "Non existing replacement policy");
+
+    phy_addr_t paddr = *p_paddr;
+    paddr.page_offset = (p_paddr->page_offset - (p_paddr->page_offset % L1_ICACHE_WORDS_PER_LINE));
+    word_t word;
+    cache_read(mem_space, &paddr, access, l1_cache, l2_cache, &word, replace);
+
+    *p_byte = ((byte_t*)(&word))[p_paddr->page_offset % L1_ICACHE_WORDS_PER_LINE];
+
     return ERR_NONE;
 }
 
