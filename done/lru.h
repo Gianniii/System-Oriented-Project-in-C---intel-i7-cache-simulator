@@ -9,7 +9,7 @@
         if (i == WAY_INDEX) { \
             cache_e->age = 0; \
         } else { \
-            if(cache_e->age < WAYS - 1) cache_e->age =  cache_e -> age + 1; \
+            if(cache_e->age < WAYS - 1) cache_e->age =  cache_e->age + 1; \
         } \
     }
 

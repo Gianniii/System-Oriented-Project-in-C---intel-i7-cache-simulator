@@ -46,7 +46,7 @@ static inline uint32_t get_addr(const phy_addr_t * paddr) {
     return (paddr->phy_page_num << PAGE_OFFSET) | (paddr->page_offset);
 }
 
-/** TODO This function is probably way too complex. Replace with a macro idk
+/**
  * @brief Looks for an empty way in the cache at the given line.
  * 
  * @param cache the cache
@@ -254,7 +254,7 @@ int cache_hit (const void * mem_space,
                uint8_t *hit_way,
                uint16_t *hit_index,
                cache_t cache_type) {
-    //M_REQUIRE_NON_NULL(mem_space); //memspace is unused here
+    //M_REQUIRE_NON_NULL(mem_space); //memspace is unused here. Are you sure?
     M_REQUIRE_NON_NULL(cache);
     M_REQUIRE_NON_NULL(paddr);
     M_REQUIRE_NON_NULL(p_line);
@@ -403,6 +403,7 @@ printf("call to read \n");
         // TODO Transfer l2_entry to l1
         /**• assigner les informations de ligne de la l2_cache_entry_t vers la
 l1_...cache_entry_t ;**/  //je suis pas sur ce que ca veux dire ca ??? quel l1_...cache_entry ?? 
+        // @michael faut utiliser the enum access pour determiner le type!
 
 		uint32_t tagInL1 = phy_addr >> L1_ICACHE_TAG_REMAINING_BITS; //new tag for level1 cache but what is it for ? 
 		uint32_t l1_line_index = (phy_addr / L1_ICACHE_LINE) % L1_ICACHE_LINES; //get line index in lvl1 cache
