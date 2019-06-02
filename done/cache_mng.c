@@ -463,7 +463,7 @@ int cache_read(const void * mem_space,
         // *** L2 Miss - Searching Memory
         debug_print("%s", "L2 Miss - Searching Memory");
         M_EXIT_IF_ERR_NOMSG(cache_entry_init(mem_space, paddr, &l1_new_entry, L1_ICACHE)); // TODO Handle error
-        memcpy(p_line, l1_new_entry.line, sizeof(word_t) * L1_ICACHE_WORDS_PER_LINE);
+        p_line = l1_new_entry.line;
     }
 
     // Inserting new_entry
