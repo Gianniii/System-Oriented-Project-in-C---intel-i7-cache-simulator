@@ -194,38 +194,23 @@ int cache_entry_init(const void * mem_space,
     M_REQUIRE(cache_type == L1_ICACHE || cache_type == L1_DCACHE || cache_type == L2_CACHE,
               ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
 
-
     uint32_t phy_addr = get_addr(paddr);
 
-    //uint32_t index;
-    size_t i = 0;
     uint32_t tag;
     uint32_t alligned_phy_addr = phy_addr & 0xFFFFFFF0; //set 4 msb bits to 0 so that it is a multiple of 16
     
-
     const word_t* start = (const word_t*)mem_space + alligned_phy_addr/sizeof(word_t);
     
-    if(cache_type == L1_ICACHE) {
-        tag = phy_addr >> L1_ICACHE_TAG_REMAINING_BITS;
-        ((l1_icache_entry_t*)cache_entry)->tag = tag;
-        ((l1_icache_entry_t*)cache_entry)->age = (uint8_t) 0;
-        ((l1_icache_entry_t*)cache_entry)->v = (uint8_t) 1;
-        memcpy(((l1_icache_entry_t*)cache_entry)->line, start, sizeof(word_t) * L1_ICACHE_WORDS_PER_LINE);
-    } else if(cache_type == L1_DCACHE) {
-        tag = phy_addr >> L1_DCACHE_TAG_REMAINING_BITS;
-        ((l1_dcache_entry_t*)cache_entry)->tag = tag;
-        ((l1_dcache_entry_t*)cache_entry)->age = (uint8_t) 0;
-        ((l1_dcache_entry_t*)cache_entry)->v = (uint8_t) 1;
-        memcpy(((l1_icache_entry_t*)cache_entry)->line, start, sizeof(word_t) * L1_ICACHE_WORDS_PER_LINE);
-    } else if(cache_type ==  L2_CACHE) {
-        tag = phy_addr >> L2_CACHE_TAG_REMAINING_BITS;
-        ((l2_cache_entry_t*)cache_entry)->tag = tag;
-        ((l2_cache_entry_t*)cache_entry)->age = (uint8_t) 0;
-        ((l2_cache_entry_t*)cache_entry)->v = (uint8_t) 1;
-        memcpy(((l2_cache_entry_t*)cache_entry)->line, start, sizeof(word_t) * L2_CACHE_WORDS_PER_LINE);
-    } else {
-        return ERR_BAD_PARAMETER;
-    }
+    #define M_CACHE_ENTRY_INIT(m_cache_type) \
+        tag = phy_addr >> m_cache_type ## _TAG_REMAINING_BITS; \
+        M_CACHE_ENTRY_T(m_cache_type)* cast_entry = (M_CACHE_ENTRY_T(m_cache_type)*)cache_entry; \
+        cast_entry->tag = tag; \
+        cast_entry->age = (uint8_t) 0; \
+        cast_entry->v = (uint8_t) 1; \
+        memcpy(cast_entry->line, start, sizeof(word_t) * m_cache_type ## _WORDS_PER_LINE);
+
+    M_EXPAND_ALL_CACHE_TYPES(M_CACHE_ENTRY_INIT);
+    #undef M_CACHE_ENTRY_INIT
 
     return ERR_NONE;
 }
