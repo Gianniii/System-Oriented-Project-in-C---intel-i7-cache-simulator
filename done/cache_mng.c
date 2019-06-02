@@ -117,7 +117,7 @@ uint16_t extract_l1_line_select(uint32_t phy_addr) {
 }
 
 uint16_t extract_l2_line_select(uint32_t phy_addr) {
-    return extractBits32(phy_addr, 4, 12); // TODO no magic
+    return extractBits32(phy_addr, 4, 13); // TODO no magic
 }
 
 #define extract_tag(phy_addr, m_cache_type) (phy_addr >> m_cache_type ## _TAG_REMAINING_BITS)
