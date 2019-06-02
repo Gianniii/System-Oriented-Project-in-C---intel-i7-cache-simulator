@@ -71,7 +71,7 @@ static inline uint32_t get_addr(const phy_addr_t * paddr) {
  * 
  * @return the index of the 1st empty way that was found. Otherwise, returns -1 
  */
-static inline uint8_t find_empty_way(void * cache, cache_t cache_type, uint16_t cache_line_index) {
+static inline int find_empty_way(void * cache, cache_t cache_type, uint16_t cache_line_index) {
     // TODO Remove this later. I left it to better understand the macro
     // foreach_way(i, L1_ICACHE_WAYS) {
     //     if (!cache_valid(M_CACHE_ENTRY_T(L1_ICACHE), L1_ICACHE_WAYS, cache_line_index, i)) {
@@ -472,6 +472,7 @@ int cache_read(const void * mem_space,
     uint8_t empty_way;
     M_EXIT_IF_ERR_NOMSG(find_or_make_empty_way(l1_cache, L1_ICACHE, l2_cache, l1_cache_line_index, l2_cache_line_index, replace, &cold_start, &empty_way));
 
+    debug_print("%s %d", "empty way: ", empty_way);
     void * cache = l1_cache;
     M_EXIT_IF_ERR_NOMSG(cache_insert(l1_cache_line_index, empty_way, &l1_new_entry, l1_cache, L1_ICACHE)); // TODO Handle error
     if (replace == LRU) {
@@ -485,6 +486,7 @@ int cache_read(const void * mem_space,
     debug_print("%s", "WOW");
     debug_print("%d", extract_word_select(phy_addr));
     debug_print("%p", p_line);
+    PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, empty_way, 4);
     *word = p_line[extract_word_select(phy_addr)];
     debug_print("%s", "WOW");
 
@@ -514,13 +516,18 @@ static inline int find_or_make_empty_way( // TODO Handle errors
     if (!l1_cold_start) { // No "cold start". Eviction!
         // *** Find oldest entry in l1_cache. It will be evicted ***
         void * cache = l1_cache;
-        foreach_way(i, L1_ICACHE_WAYS) {
-            uint8_t way_max = 0;
+        {
+            uint8_t way_max = 128;
             uint8_t max = 0;
-            uint8_t age = cache_age(l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i);
-            if (max < age) {
-                max = age;
-                way_max = i;
+            debug_print("%s", "--- Searching L1 Cache ---");
+            foreach_way(i, L1_ICACHE_WAYS) {
+                uint8_t age = cache_age(l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i);
+                debug_print("Way %d has age: %d", i, age);
+                debug_print("%d", cache_valid(l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i));
+                if (max < age) {
+                    max = age;
+                    way_max = i;
+                }
             }
             l1_insert_way = way_max;
         }
@@ -535,8 +542,9 @@ static inline int find_or_make_empty_way( // TODO Handle errors
         uint8_t l2_cold_start = (l2_insert_way != -1);
 
         cache = l2_cache;
+
         if (!l2_cold_start) {
-            uint8_t way_max = 0;
+            uint8_t way_max = 128;
             uint8_t max = 0;
             foreach_way(i, L2_CACHE_WAYS) {
             uint8_t age = cache_age(l2_cache_entry_t, L2_CACHE_WAYS, l2_cache_line_index, i);
