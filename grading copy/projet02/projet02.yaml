@@ -1,0 +1,108 @@
+- id: group_9e0099
+- Makefile: 2           # max 3, missing tlb_hrchy_mng.c dependency for tlb_hrchy_mng.o -1
+- addr.h: # NE PAS REMPLIR CETTE LIGNE
+    trois typedef: 3    # max 3, 
+    virt_addr_t: 5      # max 5, 
+    phy_addr_t: 5       # max 5, 
+- addr_mng.c: # NE PAS REMPLIR CETTE LIGNE
+  - init_virt_addr(): 6                        # max 6, 
+  - init_virt_addr64(): 6                      # max 6, 
+  - init_phy_addr(): 4                         # max 4,
+  - virt_addr_t_to_uint64_t(): 5               # max 5, 
+  - virt_addr_t_to_virtual_page_number(): 5    # max 5, 
+  - print_virtual_address(): 3                 # max 3, 
+  - print_physical_address(): 3                # max 3,
+- commands.h: # NE PAS REMPLIR CETTE LIGNE
+    command_word_t: 2    # max 2, 
+    command_t: 7         # max 7, 
+    program_t: 5         # max 5, 
+- commands.c: # NE PAS REMPLIR CETTE LIGNE
+  - program_print(): 7          # max 7, 
+  - program_init(): 6           # max 6,
+  - program_add_command(): 12    # max 16, 4/7 validity checks done -3, still missing overflow check -1
+  - program_shrink(): 4         # max 6, still non-compliant behavour -2
+  - program_read(): # NE PAS REMPLIR CETTE LIGNE
+      modularisation: 5               # max 5,
+      get_next_nonspace_char(): 3     # max 3, 
+      do_D(): 8                       # max 8, 
+      do_R(): 7                       # max 8, still missing initialization of write_data to a default value -1
+      do_W(): 8                       # max 8,
+      command_line_read(): 9          # max 10, missing detection and propagation of error from some involved auxiliary functions -0.5, potential override of error with ERR_NONE in some auxiliary functions -0.5
+      core: 6.5                         # max 11, still missing handling of error code of program_init -1, missing file closing in case of error -0.5, still missing handling of error code of program_add_command -1, still missing check of ferror and propagation of ERR_IO -1, missing test and propagation of program_shrinking's error code -1
+  - program_free(): 6                 # max 6, 
+- memory.c: # NE PAS REMPLIR CETTE LIGNE
+  - mem_init_from_dumpfile(): # NE PAS REMPLIR CETTE LIGNE
+      vérifications d\'usage: 2    # max 2, 
+      ouverture fichier: 5         # max 5, 
+      allocation mémoire: 5        # max 5,
+      lecture fichier: 5           # max 5, 
+      fermeture fichier: 2         # max 2, 
+  - mem_init_from_description(): # NE PAS REMPLIR CETTE LIGNE
+      vérifications d\'usage: 2      # max 2, 
+      ouverture fichier: 5           # max 5, 
+      allocation mémoire: 5          # max 5, 
+      lecture PGD page filename: 5   # max 5,
+      page_file_read(): 8            # max 8, 
+      lecture PUDs: 15                # max 15,
+      lecture pages data: 15          # max 15,
+      fermeture fichier: 2           # max 2, 
+- page_walk.c: # NE PAS REMPLIR CETTE LIGNE
+    read_page_entry(): 2    # max 2, 
+    page_walk(): 12          # max 12, 
+- list.c: # NE PAS REMPLIR CETTE LIGNE
+    - is_empty_list: 7.5         # max 7.5, 
+    - init_list: 5             # max 7.5, missing NULL check -2.5
+    - clear_list: 10            # max 10, 
+    - push_back: # NE PAS REMPLIR CETTE LIGNE
+        new node: 7.5            # max 7.5, 
+        insert after: 7.5        # max 7.5, 
+        main part: 5           # max 5, 
+    - push_front: # NE PAS REMPLIR CETTE LIGNE
+        insert before: 7.5       # max 7.5, 
+        main part: 5           # max 5, 
+    - pop_back: # NE PAS REMPLIR CETTE LIGNE
+        remove node: 7.5        # max 7.5, 
+        main part: 5.5          # max 7.5, missing update of this->front to NULL when the list becomes empty -2
+    - pop_front: 5.5          # max 7.5, missing update of this->back to NULL when the list becomes empty -2
+    - move_back: 9             # max 15, moving back a copy of the given node, not the node itself -6
+    - print_list: 4            # max 7.5, missing NULL check -2.5, incorrect count of number of printed characters -1
+    - print_reverse_list: 3    # max 3, missing NULL check -0, incorrect count of number of printed characters -0
+    - modularisation: 0        # max 7.5, 
+- tlb_mng.h: 7              # max 7, 
+- tlb.h: 5                  # max 5, 
+- tlb_mng.c: # NE PAS REMPLIR CETTE LIGNE
+    - tlb_entry_init(): 7.5    # max 7.5, 
+    - tlb_flush(): 7.5         # max 7.5, 
+    - tlb_insert(): 6.5        # max 7.5, missing validity check of line_index -1
+    - tlb_hit(): 20           # max 20, 
+    - tlb_search(): # NE PAS REMPLIR CETTE LIGNE
+        vérifications: 0    # max 5, 
+        hit: 2.5              # max 2.5, 
+        page_walker: 2.5      # max 2.5, 
+        new entry: 7        # max 10, missing test and propagation of error from tlb_entry_init -1.5, missing test and propagation of error from tlb_insert -1.5
+- tlb_hrchy.h: 13         # max 13, 
+- tlb_hrchy_mng.c: # NE PAS REMPLIR CETTE LIGNE
+    - tlb_entry_init(): # NE PAS REMPLIR CETTE LIGNE
+        macros: 5           # max 5,
+        vérifications: 2    # max 2, 
+        coeur: 7.5            # max 7.5, 
+    - tlb_flush(): 7.5      # max 7.5, 
+    - tlb_insert(): # NE PAS REMPLIR CETTE LIGNE
+        macros: 3           # max 3, 
+        vérifications: 2    # max 2, 
+        coeur: 7.5            # max 7.5, 
+    - tlb_hit(): # NE PAS REMPLIR CETTE LIGNE
+        macros: 6           # max 6, 
+        vérifications: 3    # max 3, 
+        coeur: 15            # max 15, 
+    - tlb_search(): # NE PAS REMPLIR CETTE LIGNE
+        macros: 0                    # max 9, 
+        vérifications: 6             # max 8, missing sanity checks -2
+        hits: 6                      # max 6, 
+        L2 vers L1: 8                # max 8, 
+        page_walker: 3               # max 3, 
+        new L2 entry: 7.5              # max 7.5, 
+        insert in L1: 7.5              # max 7.5, 
+        eviction in other L1: 9      # max 15, wrong eviction policy -6
+- style: 2        # max 2, min -2, 
+- bonus/malus: 1  # max 5, min -5, very elegant macro M_MEMORY_DESC_EXIT_IF +2, still hardcoded values instead of constants / macros in commands.c -1
