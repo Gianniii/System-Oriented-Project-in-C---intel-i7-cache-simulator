@@ -61,7 +61,7 @@ tlb_mng.o : tlb_mng.c tlb.h addr.h list.h addr_mng.h error.h tlb_mng.h page_walk
 test-tlb_simple.o: test-tlb_simple.c list.h error.h util.h addr_mng.h commands.h memory.h tlb.h tlb_mng.h
 test-tlb_simple: test-tlb_simple.o error.o list.o addr_mng.o commands.o memory.o tlb_mng.o page_walk.o
 
-test-tlb_hrchy.o: error.h util.h addr_mng.h commands.h memory.h tlb_hrchy.h tlb_hrchy_mng.h page_walk.h
+test-tlb_hrchy.o: test-tlb_hrchy.c error.h util.h addr_mng.h commands.h memory.h tlb_hrchy.h tlb_hrchy_mng.h page_walk.h
 test-tlb_hrchy: error.o addr_mng.o commands.o memory.o tlb_hrchy_mng.o page_walk.o test-tlb_hrchy.o
 
 cache_mng.o: mem_access.h addr.h cache.h

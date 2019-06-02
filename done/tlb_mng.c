@@ -37,6 +37,8 @@ int tlb_insert( uint32_t line_index,
                 tlb_entry_t * tlb) {
 	M_REQUIRE_NON_NULL(tlb_entry);
 	M_REQUIRE_NON_NULL(tlb);
+	M_REQUIRE(line_index < TLB_LINES, ERR_BAD_PARAMETER, "%s", "index out of bounds");
+	
 	
 	tlb[line_index].tag = tlb_entry->tag;
 	tlb[line_index].phy_page_num = tlb_entry->phy_page_num;
@@ -84,6 +86,13 @@ int tlb_search( const void * mem_space,
                 tlb_entry_t * tlb,
                 replacement_policy_t * replacement_policy,
                 int* hit_or_miss) {
+					
+	M_REQUIRE_NON_NULL(mem_space);
+	M_REQUIRE_NON_NULL(vaddr);
+	M_REQUIRE_NON_NULL(paddr);
+	M_REQUIRE_NON_NULL(tlb);
+	M_REQUIRE_NON_NULL(replacement_policy);		
+					
 	int error = ERR_NONE;
 	//if its a hit the paddr is set correctly from the TLB
 	*hit_or_miss = tlb_hit(vaddr, paddr, tlb, replacement_policy);
@@ -93,9 +102,12 @@ int tlb_search( const void * mem_space,
 		if(error == ERR_NONE) {
 			//init new entry, insert it, at correct index(replace least used index) and then update the LRU list
 			tlb_entry_t newEntry;
-			tlb_entry_init(vaddr, paddr, &newEntry);
+			
+			error = tlb_entry_init(vaddr, paddr, &newEntry);
 			//the value of the front is the LRU index so we insert the new entry at the index(replace least used entry in tlb)
-			tlb_insert(replacement_policy->ll->front->value, &newEntry, tlb);
+			if(error == ERR_NONE) {
+				error = tlb_insert(replacement_policy->ll->front->value, &newEntry, tlb);
+			}
 			//we then update the LRU index by moving the front using the replacement policy(ie moving it to the back of the list)
 			replacement_policy->move_back(replacement_policy->ll, replacement_policy->ll->front);
 		}

@@ -13,8 +13,10 @@ int is_empty_list(const list_t* this){
 }
 
 void init_list(list_t* this){
-	this->front = NULL;
-	this->back = NULL;
+	if(this != NULL) {
+		this->front = NULL;
+		this->back = NULL;
+	}
 }
 
 void clear_list(list_t* this) {
@@ -41,15 +43,7 @@ node_t* push_back(list_t* this, const list_content_t* value) {
 		return NULL;
 	}
 	newNode->value = *value;
-	newNode->previous = this->back;
-	newNode->next = NULL;
-	if(is_empty_list(this) == 1){
-		this->front = newNode;
-	} else {
-		//if list was not null can rewire old_last elem so its next points to our new node
-		this->back->next = newNode;
-	}
-	this->back = newNode;
+	connect_as_last(this, newNode);
 	return newNode;
 }
 
@@ -65,9 +59,20 @@ void move_back(list_t* this, node_t* n) {
 			this->front = n->next;
 			n->next->previous = NULL;
 		}
-		push_back(this, &n->value);
-		free(n);
+		connect_as_last(this, n);
 	}
+}
+
+void connect_as_last(list_t* this, node_t* n) {
+		n->previous = this->back;
+		n->next = NULL;
+		if(is_empty_list(this) == 1){
+			this->front = n;
+		} else {
+			//if list was not null can rewire old_last elem so its next points to our new node
+			this->back->next = n;
+		}
+		this->back = n;
 }
 
 node_t* push_front(list_t* this, const list_content_t* value){
@@ -98,10 +103,13 @@ void pop_back(list_t* this){
 	if(!is_empty_list(this)) {
 		if(this->back->previous != NULL) {
 			this->back->previous->next = NULL;
+		} else {
+			this->front = NULL; //if list become null set front to null
 		}
 		node_t* newLast = this->back->previous;  //create pointer that points to the new last node
 		free(this->back); //delete last node
 		this->back = newLast; //rewire list back to the new last node
+		
 	}
 }
 
@@ -109,6 +117,8 @@ void pop_front(list_t* this) {
 	if(!is_empty_list(this)) {
 		if(this->front->next != NULL) {
 			this->front->next->previous = NULL;
+		} else {
+			this->back = NULL; //if list becomes null set back to null
 		}
 		node_t* newFirst = this->front->next;
 		free(this->front);
@@ -117,32 +127,42 @@ void pop_front(list_t* this) {
 }
 
 int print_list(FILE* stream, const list_t* this) {
+	if(stream == NULL || this == NULL) return 0;
+	
 	int number_printed_characters = 0;
 	int first_interation = 0;
 	fprintf(stream, "(");
+	number_printed_characters += 1;
 	for_all_nodes(n, this) {
 		if(first_interation == 1) {
 			fprintf(stream, ", ");
+			number_printed_characters += 2;
 		}
 		number_printed_characters += print_node(stream, n->value);
 		first_interation = 1;
 	}
 	fprintf(stream, ")");
+	number_printed_characters += 1;
 	return number_printed_characters;
 }
 
 int print_reverse_list(FILE* stream, const list_t* this) {
+	if(stream == NULL || this == NULL) return 0;
+	
 	int number_printed_characters = 0;
 	int first_iteration = 0;
 	fprintf(stream, "(");
+	number_printed_characters += 1;
 	for_all_nodes_reverse(n, this) {
 		if(first_iteration == 1) {
 			fprintf(stream, ", ");
+			number_printed_characters += 2;
 		}
 		number_printed_characters += print_node(stream, n->value);
 		first_iteration = 1;
 	}
 	fprintf(stream, ")");
+	number_printed_characters += 1;
 	return number_printed_characters;
 }
 
