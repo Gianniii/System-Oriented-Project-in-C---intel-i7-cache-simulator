@@ -4,6 +4,8 @@
 #include "util.h" // for SIZE_T_FMT
 #include "error.h"
 
+inline static void connect_as_last(list_t* this, node_t* n);
+
 int is_empty_list(const list_t* this){
 	M_REQUIRE_NON_NULL(this);
 	if(this->front == NULL && this->back == NULL) {
