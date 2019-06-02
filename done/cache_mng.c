@@ -433,7 +433,7 @@ int cache_read(const void * mem_space,
     // *** Searching Level 1 Cache ***
     debug_print("%s", "Searching Level 1 Cache");
     if (1) { // access == INSTRUCTION
-        cache_hit(mem_space, l1_cache, paddr, &p_line, &hit_way, &hit_index, L1_ICACHE); // TODO Handle error
+        M_EXIT_IF_ERR_NOMSG(cache_hit(mem_space, l1_cache, paddr, &p_line, &hit_way, &hit_index, L1_ICACHE));
         if (hit_way != HIT_WAY_MISS) {
             *word = p_line[extract_word_select(phy_addr)];
             debug_print("%s", "L1 Hit! - return ...");
@@ -445,7 +445,7 @@ int cache_read(const void * mem_space,
     debug_print("%s", "L1 Miss - Searching Level 2 Cache");
 
     l1_icache_entry_t l1_new_entry;
-    cache_hit(mem_space, l2_cache, paddr, &p_line, &hit_way, &hit_index, L2_CACHE); // TODO Handle error
+    M_EXIT_IF_ERR_NOMSG(cache_hit(mem_space, l2_cache, paddr, &p_line, &hit_way, &hit_index, L2_CACHE));
     if (hit_way != HIT_WAY_MISS) {
         debug_print("%s", "L2 Hit!");
         if (1) { // access == INSTRUCTION
@@ -462,17 +462,17 @@ int cache_read(const void * mem_space,
     } else {
         // *** L2 Miss - Searching Memory
         debug_print("%s", "L2 Miss - Searching Memory");
-        cache_entry_init(mem_space, paddr, &l1_new_entry, L1_ICACHE); // TODO Handle error
+        M_EXIT_IF_ERR_NOMSG(cache_entry_init(mem_space, paddr, &l1_new_entry, L1_ICACHE)); // TODO Handle error
     }
 
     // Inserting new_entry
     debug_print("%s", "Inserting new_entry");
     uint8_t cold_start;
     uint8_t empty_way;
-    int err = find_or_make_empty_way(l1_cache, L1_ICACHE, l2_cache, l1_cache_line_index, l2_cache_line_index, replace, &cold_start, &empty_way);
+    M_EXIT_IF_ERR_NOMSG(find_or_make_empty_way(l1_cache, L1_ICACHE, l2_cache, l1_cache_line_index, l2_cache_line_index, replace, &cold_start, &empty_way));
 
     void * cache = l1_cache;
-    cache_insert(l1_cache_line_index, empty_way, &l1_new_entry, l1_cache, L1_ICACHE); // TODO Handle error
+    M_EXIT_IF_ERR_NOMSG(cache_insert(l1_cache_line_index, empty_way, &l1_new_entry, l1_cache, L1_ICACHE)); // TODO Handle error
     if (replace == LRU) {
         if (cold_start) {
             LRU_age_increase(l1_icache_entry_t, L1_ICACHE_WAYS, empty_way, l1_cache_line_index);    
@@ -497,7 +497,7 @@ int cache_read(const void * mem_space,
  * 
  * @param bool_cold_start (modified) was this a cold start? 
  */
-static inline int find_or_make_empty_way(
+static inline int find_or_make_empty_way( // TODO Handle errors
         void * l1_cache, 
         cache_t l1_cache_type, 
         void * l2_cache, 
