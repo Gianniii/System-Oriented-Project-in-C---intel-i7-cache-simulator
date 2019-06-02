@@ -481,7 +481,11 @@ int cache_read(const void * mem_space,
         }
     }
 
+    debug_print("%s", "WOW");
+    debug_print("%d", extract_word_select(phy_addr));
+    debug_print("%p", p_line);
     *word = p_line[extract_word_select(phy_addr)];
+    debug_print("%s", "WOW");
 
     return ERR_NONE;
 }
