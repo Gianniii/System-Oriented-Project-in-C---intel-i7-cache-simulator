@@ -222,13 +222,12 @@ int cache_flush(void *cache, cache_t cache_type) {
               ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
     
     size_t cache_size;
-    if(cache_type == L1_ICACHE) {
-        cache_size = L1_ICACHE_LINES * L1_ICACHE_WAYS * sizeof(l1_icache_entry_t);
-    } else if(cache_type == L1_DCACHE) {
-        cache_size = L1_DCACHE_LINES * L1_DCACHE_WAYS * sizeof(l1_dcache_entry_t);
-    } else {
-        cache_size = L2_CACHE_LINES * L2_CACHE_WAYS * sizeof(l2_cache_entry_t);
-    }
+
+    #define M_CACHE_FLUSH(m_cache_type) \
+        cache_size = (m_cache_type ## _LINES) * (m_cache_type ## _WAYS) * sizeof(M_CACHE_ENTRY_T(m_cache_type));
+
+    M_EXPAND_ALL_CACHE_TYPES(M_CACHE_FLUSH)
+    #undef M_CACHE_FLUSH
 
     memset(cache, 0, cache_size);
     return ERR_NONE;
