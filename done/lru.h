@@ -14,9 +14,9 @@
     }
 
 #define LRU_age_update(TYPE, WAYS, WAY_INDEX, LINE_INDEX) \
+    uint8_t temp = cache_age(TYPE, WAYS, LINE_INDEX, WAY_INDEX); \
     foreach_way(i, WAYS) { \
         TYPE* cache_e = cache_entry(TYPE, WAYS, LINE_INDEX, i); \
-        uint8_t temp = cache_e->age; \
         if (i == WAY_INDEX) { \
             cache_e->age = 0; \
         } else if (cache_e->age < temp) { \

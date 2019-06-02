@@ -522,8 +522,7 @@ static inline int find_or_make_empty_way( // TODO Handle errors
             debug_print("%s", "--- Searching L1 Cache ---");
             foreach_way(i, L1_ICACHE_WAYS) {
                 uint8_t age = cache_age(l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i);
-                debug_print("Way %d has age: %d", i, age);
-                debug_print("%d", cache_valid(l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i));
+                PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
                 if (max < age) {
                     max = age;
                     way_max = i;
