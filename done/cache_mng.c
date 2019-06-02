@@ -45,6 +45,16 @@
 //=========================================================================
 // Helper functions
 
+static inline int find_or_make_empty_way(
+        void * l1_cache, 
+        cache_t l1_cache_type, 
+        void * l2_cache, 
+        uint16_t l1_cache_line_index,
+        uint16_t l2_cache_line_index,
+        cache_replace_t replace,
+        uint8_t* bool_cold_start,
+        uint8_t* insert_way);
+
 /**
  * @brief TODO
  */
@@ -436,13 +446,11 @@ int cache_read(const void * mem_space,
     }
 
     // *** L1 Miss - Searching Level 2 Cache ***
-
+    l1_icache_entry_t l1_new_entry;
     cache_hit(mem_space, l2_cache, paddr, &p_line, &hit_way, &hit_index, L2_CACHE); // TODO Handle error
     if (hit_way != HIT_WAY_MISS) {
-        
-        if (access == INSTRUCTION) {
+        if (1) { // access == INSTRUCTION
             // *** Create new l1_cache_entry ***
-            l1_icache_entry_t l1_new_entry;
             l1_new_entry.v = 1;
             memcpy(l1_new_entry.line, p_line, sizeof(word_t) * L1_ICACHE_WORDS_PER_LINE);
             l1_new_entry.tag = extract_tag(phy_addr, L1_ICACHE);
@@ -451,30 +459,28 @@ int cache_read(const void * mem_space,
             void * cache = l2_cache;
             cache_valid(l2_cache_entry_t, L2_CACHE_WAYS, hit_index, hit_way) = 0;
             // ***
-
-            uint8_t cold_start;
-            uint8_t empty_way;
-            int err = find_or_make_empty_way(l1_cache, L1_ICACHE, l2_cache, l1_cache_line_index, l2_cache_line_index, replace, &empty_way, &cold_start);
-
-            cache_insert(l1_cache_line_index, empty_way, &l1_new_entry, l1_cache, L1_ICACHE); // TODO Handle error
-            if (replace == LRU) {
-                if (cold_start) {
-                    LRU_age_increase(l1_icache_entry_t, L1_ICACHE_WAYS, empty_way, l1_cache_line_index);    
-                } else {
-                    LRU_age_update(l1_icache_entry_t, L1_ICACHE_WAYS, empty_way, l1_cache_line_index);
-                }
-            }
         } else {} //TODO DATA
-		
-        *word = p_line[extract_word_select(phy_addr)];
-        return ERR_NONE;
+    } else {
+        // *** L2 Miss - Searching Memory
+        cache_entry_init(mem_space, paddr, &l1_new_entry, L1_ICACHE); // TODO Handle error
     }
 
-    // *** L2 Miss - Searching Memory
+    // Inserting new_entry
+    uint8_t cold_start;
+    uint8_t empty_way;
+    int err = find_or_make_empty_way(l1_cache, L1_ICACHE, l2_cache, l1_cache_line_index, l2_cache_line_index, replace, &empty_way, &cold_start);
 
-    l1_icache_entry_t l1_new_entry;
-    cache_entry_init(mem_space, paddr, &l1_new_entry, L1_ICACHE); // TODO Handle error
-    // cache_insert(l1_cache_line_index, )
+    void * cache = l1_cache;
+    cache_insert(l1_cache_line_index, empty_way, &l1_new_entry, l1_cache, L1_ICACHE); // TODO Handle error
+    if (replace == LRU) {
+        if (cold_start) {
+            LRU_age_increase(l1_icache_entry_t, L1_ICACHE_WAYS, empty_way, l1_cache_line_index);    
+        } else {
+            LRU_age_update(l1_icache_entry_t, L1_ICACHE_WAYS, empty_way, l1_cache_line_index);
+        }
+    }
+
+    *word = p_line[extract_word_select(phy_addr)];
 
     return ERR_NONE;
 }
@@ -503,7 +509,7 @@ static inline int find_or_make_empty_way(
         // *** Find oldest entry in l1_cache. It will be evicted ***
         void * cache = l1_cache;
         foreach_way(i, L1_ICACHE_WAYS) {
-            uint8_t way_max;
+            uint8_t way_max = 0;
             uint8_t max = 0;
             uint8_t age = cache_age(l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i);
             if (max < age) {
@@ -524,7 +530,7 @@ static inline int find_or_make_empty_way(
 
         cache = l2_cache;
         if (!l2_cold_start) {
-            uint8_t way_max;
+            uint8_t way_max = 0;
             uint8_t max = 0;
             foreach_way(i, L2_CACHE_WAYS) {
             uint8_t age = cache_age(l2_cache_entry_t, L2_CACHE_WAYS, l2_cache_line_index, i);
