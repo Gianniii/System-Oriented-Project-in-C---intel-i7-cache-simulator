@@ -401,40 +401,7 @@ printf("call to read \n");
 
     cache_hit(mem_space, l2_cache, paddr, &p_line, &hit_way, &hit_index, L2_CACHE); // TODO Handle error
     if (hit_way != HIT_WAY_MISS) {
-        // TODO Transfer l2_entry to l1
-        /**• assigner les informations de ligne de la l2_cache_entry_t vers la
-l1_...cache_entry_t ;**/  //je suis pas sur ce que ca veux dire ca ??? quel l1_...cache_entry ?? 
-        // @michael faut utiliser the enum access pour determiner le type!
-
-		uint32_t tagInL1 = phy_addr >> L1_ICACHE_TAG_REMAINING_BITS; //new tag for level1 cache but what is it for ? 
-		uint32_t l1_line_index = (phy_addr / L1_ICACHE_LINE) % L1_ICACHE_LINES; //get line index in lvl1 cache
-		//checkl if available spot in l1_cache
-		if(access == INSTRUCTION) {
-			
-		} //same for DATA 
-		
-		
-		//invalider entrée dans l2 cache
-		void* cache = l2_cache; //for the macro
-		cache_valid(l2_cache_entry_t, L2_CACHE_WAYS, hit_index, hit_way) = 0;
-		
-		//check if space in l1_cache and insert if there is 
-		if(access == INSTRUCTION) {
-			foreach_way(i, L1_ICACHE_WAYS) {
-				if(cache_valid(l2_cache_entry_t, L2_CACHE_WAYS, hit_index, i) == 0) {
-					//tryint to make new entry to insert but cant assign the p_line to it =/
-					l1_icache_entry_t new_line;
-					cache_entry_init(mem_space, paddr, &new_line,(access == INSTRUCTION ? L1_ICACHE : L1_DCACHE));
-					//new_line.line = p_line; //ok so i cant do this since array type. should i copy the words into the array of my newline ? 
-					cache_insert(l1_line_index, i, &new_line, l1_cache, L1_ICACHE);
-					cache = l1_cache; //for the macro
-					LRU_age_increase(l1_icache_entry_t, L1_ICACHE_WAYS, i, l1_line_index);
-					//if we inserted it once we should exit the loop
-				}
-			}
-		} //same for DATA 
-		
-		
+        
 		
         *word = p_line[phy_addr % L2_CACHE_WORDS_PER_LINE];
         return ERR_NONE;
