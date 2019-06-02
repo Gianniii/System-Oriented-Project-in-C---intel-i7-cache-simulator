@@ -210,25 +210,19 @@ int cache_entry_init(const void * mem_space,
         ((l1_icache_entry_t*)cache_entry)->tag = tag;
         ((l1_icache_entry_t*)cache_entry)->age = (uint8_t) 0;
         ((l1_icache_entry_t*)cache_entry)->v = (uint8_t) 1;
-        for(i = 0; i < L1_ICACHE_WORDS_PER_LINE; i++) { // TODO Probabably can be replaced with foreach_way(var, ways)
-            ((l1_icache_entry_t*)cache_entry)->line[i] = start[i];
-        }
+        memcpy(((l1_icache_entry_t*)cache_entry)->line, start, sizeof(word_t) * L1_ICACHE_WORDS_PER_LINE);
     } else if(cache_type == L1_DCACHE) {
         tag = phy_addr >> L1_DCACHE_TAG_REMAINING_BITS;
         ((l1_dcache_entry_t*)cache_entry)->tag = tag;
         ((l1_dcache_entry_t*)cache_entry)->age = (uint8_t) 0;
         ((l1_dcache_entry_t*)cache_entry)->v = (uint8_t) 1;
-        for(i = 0; i < L1_DCACHE_WORDS_PER_LINE; i++) {
-            (((l1_dcache_entry_t*)cache_entry)->line)[i] = start[i];
-        }
+        memcpy(((l1_icache_entry_t*)cache_entry)->line, start, sizeof(word_t) * L1_ICACHE_WORDS_PER_LINE);
     } else if(cache_type ==  L2_CACHE) {
         tag = phy_addr >> L2_CACHE_TAG_REMAINING_BITS;
         ((l2_cache_entry_t*)cache_entry)->tag = tag;
         ((l2_cache_entry_t*)cache_entry)->age = (uint8_t) 0;
         ((l2_cache_entry_t*)cache_entry)->v = (uint8_t) 1;
-        for(i = 0; i < L2_CACHE_WORDS_PER_LINE; i++) {
-            ((l2_cache_entry_t*)cache_entry)->line[i] = start[i];
-        }
+        memcpy(((l2_cache_entry_t*)cache_entry)->line, start, sizeof(word_t) * L2_CACHE_WORDS_PER_LINE);
     } else {
         return ERR_BAD_PARAMETER;
     }
@@ -474,21 +468,37 @@ int cache_read(const void * mem_space,
 
     debug_print("%s %d", "empty way: ", empty_way);
     void * cache = l1_cache;
+    l1_new_entry.age = cache_age(l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, empty_way);
+
+    debug_print("%s", "================= Before =================");
+    foreach_way(i, L1_ICACHE_WAYS) {
+        PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
+    }
+    debug_print("%s", "=========================================");
     M_EXIT_IF_ERR_NOMSG(cache_insert(l1_cache_line_index, empty_way, &l1_new_entry, l1_cache, L1_ICACHE)); // TODO Handle error
+    debug_print("%s", "================= After Insert =================");
+    foreach_way(i, L1_ICACHE_WAYS) {
+        PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
+    }
+    debug_print("%s", "=========================================");
     if (replace == LRU) {
         if (cold_start) {
-            LRU_age_increase(l1_icache_entry_t, L1_ICACHE_WAYS, empty_way, l1_cache_line_index);    
+            debug_print("cold_start = %d \tage_increase", cold_start);
+            LRU_age_increase(l1_icache_entry_t, L1_ICACHE_WAYS, empty_way, l1_cache_line_index);
         } else {
+            debug_print("cold_start = %d \tage_update", cold_start);
             LRU_age_update(l1_icache_entry_t, L1_ICACHE_WAYS, empty_way, l1_cache_line_index);
         }
     }
+    debug_print("%s", "================= After =================");
+    foreach_way(i, L1_ICACHE_WAYS) {
+        PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
+    }
+    debug_print("%s", "=========================================");
 
-    debug_print("%s", "WOW");
     debug_print("%d", extract_word_select(phy_addr));
-    debug_print("%p", p_line);
-    PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, empty_way, 4);
+    // PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, empty_way, 4);
     *word = p_line[extract_word_select(phy_addr)];
-    debug_print("%s", "WOW");
 
     return ERR_NONE;
 }
@@ -559,7 +569,7 @@ static inline int find_or_make_empty_way( // TODO Handle errors
         l2_cache_entry_t l2_new_entry;
         l2_new_entry.v = 1;
         l2_new_entry.tag = l1_old_entry.tag >> (L1_ICACHE_TAG_BITS - L2_CACHE_TAG_BITS);
-        l2_new_entry.age = 0;
+        l2_new_entry.age = cache_age(l2_cache_entry_t, L2_CACHE_WAYS, l2_cache_line_index, l2_insert_way);
         memcpy(l2_new_entry.line, l1_old_entry.line, sizeof(word_t) * L1_ICACHE_WORDS_PER_LINE);
         // ======
 
