@@ -221,7 +221,7 @@ int cache_insert(uint16_t cache_line_index,
 
     #define M_CACHE_INSERT(m_cache_type) \
         M_REQUIRE(cache_line_index < m_cache_type ## _LINES, ERR_BAD_PARAMETER, "%s", "cache_line_index out of bounds"); \
-        M_REQUIRE(cache_way < m_cache_type ## _WAYS, "%s", "cache_way out of bounds"); \
+        M_REQUIRE(cache_way < m_cache_type ## _WAYS, ERR_BAD_PARAMETER, "%s", "cache_way out of bounds"); \
         M_CACHE_ENTRY_T(m_cache_type)* cache_line = cache_entry(M_CACHE_ENTRY_T(m_cache_type), m_cache_type ## _WAYS, cache_line_index, cache_way); \
         *cache_line = *((M_CACHE_ENTRY_T(m_cache_type)*) cache_line_in); \
 
@@ -401,7 +401,14 @@ printf("call to read \n");
 
     cache_hit(mem_space, l2_cache, paddr, &p_line, &hit_way, &hit_index, L2_CACHE); // TODO Handle error
     if (hit_way != HIT_WAY_MISS) {
+
+        void * cache = l2_cache;
         
+        if (access == INSTRUCTION) {
+            l1_icache_entry_t* l1_entry = cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, hit_index, 1);
+            l1_entry->line[0] = p_line; // TODO continue
+            
+        } else {} //TODO DATA
 		
         *word = p_line[phy_addr % L2_CACHE_WORDS_PER_LINE];
         return ERR_NONE;
