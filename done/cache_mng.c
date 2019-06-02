@@ -156,8 +156,7 @@ uint16_t extract_l2_line_select(uint32_t phy_addr) {
 
 //=========================================================================
 // see cache_mng.h
-int cache_dump(FILE* output, const void* cache, cache_t cache_type)
-{
+int cache_dump(FILE* output, const void* cache, cache_t cache_type) {
     M_REQUIRE_NON_NULL(output);
     M_REQUIRE_NON_NULL(cache);
 
@@ -215,7 +214,6 @@ int cache_entry_init(const void * mem_space,
     return ERR_NONE;
 }
 
-
 int cache_flush(void *cache, cache_t cache_type) {
     M_REQUIRE_NON_NULL(cache);
     M_REQUIRE(cache_type == L1_ICACHE || cache_type == L1_DCACHE || cache_type == L2_CACHE,
@@ -247,30 +245,12 @@ int cache_insert(uint16_t cache_line_index,
         M_REQUIRE(cache_line_index < m_cache_type ## _LINES, ERR_BAD_PARAMETER, "%s", "cache_line_index out of bounds"); \
         M_REQUIRE(cache_way < m_cache_type ## _WAYS, ERR_BAD_PARAMETER, "%s", "cache_way out of bounds"); \
         M_CACHE_ENTRY_T(m_cache_type)* cache_line = cache_entry(M_CACHE_ENTRY_T(m_cache_type), m_cache_type ## _WAYS, cache_line_index, cache_way); \
-        *cache_line = *((M_CACHE_ENTRY_T(m_cache_type)*) cache_line_in); \
+        *cache_line = *((M_CACHE_ENTRY_T(m_cache_type)*) cache_line_in);
 
     M_EXPAND_ALL_CACHE_TYPES(M_CACHE_INSERT)
     return ERR_NONE;
     #undef M_CACHE_INSERT
 }
-
-
-/**
- * @brief Check if a instruction/data is present in one of the caches.
- *
- * On hit, update hit infos to corresponding index
- *         and update the cache-line-size chunk of data passed as the pointer to the function.
- * On miss, update hit infos to HIT_WAY_MISS or HIT_INDEX_MISS.
- *
- * @param mem_space starting address of the memory space
- * @param cache pointer to the beginning of the cache
- * @param paddr pointer to physical address
- * @param p_line pointer to a cache-line-size chunk of data to return
- * @param hit_way (modified) cache way where hit was detected, HIT_WAY_MISS on miss
- * @param hit_index (modified) cache line index where hit was detected, HIT_INDEX_MISS on miss
- * @param cache_type to distinguish between different caches
- * @return error code
- */
 
 int cache_hit (const void * mem_space,
                void * cache,
@@ -279,7 +259,7 @@ int cache_hit (const void * mem_space,
                uint8_t *hit_way,
                uint16_t *hit_index,
                cache_t cache_type) {
-    //M_REQUIRE_NON_NULL(mem_space); //memspace is unused here. Are you sure?
+    //M_REQUIRE_NON_NULL(mem_space); // No test since mem_space in unused here!
     M_REQUIRE_NON_NULL(cache);
     M_REQUIRE_NON_NULL(paddr);
     M_REQUIRE_NON_NULL(p_line);
@@ -348,38 +328,13 @@ int cache_hit (const void * mem_space,
         }
 	}
 
-    if (!hit) { // TODO Maybe `hit` is not needed
-        *hit_way = HIT_WAY_MISS;
-        *hit_index = HIT_INDEX_MISS;
-    }
+    // Set fields to miss if "Cache Miss"
+    *hit_way = HIT_WAY_MISS;
+    *hit_index = HIT_INDEX_MISS;
 
     return ERR_NONE;
 }
 
-
-
- /** @brief Ask cache for a word of data.
- *  Exclusive policy (https://en.wikipedia.org/wiki/Cache_inclusion_policy)
- *      Consider the case when L2 is exclusive of L1. Suppose there is a
- *      processor read request for block X. If the block is found in L1 cache,
- *      then the data is read from L1 cache and returned to the processor. If
- *      the block is not found in the L1 cache, but present in the L2 cache,
- *      then the cache block is moved from the L2 cache to the L1 cache. If
- *      this causes a block to be evicted from L1, the evicted block is then
- *      placed into L2. This is the only way L2 gets populated. Here, L2
- *      behaves like a victim cache. If the block is not found neither in L1 nor
- *      in L2, then it is fetched from main memory and placed just in L1 and not
- *      in L2.
- *
- * @param mem_space pointer to the memory space
- * @param paddr pointer to a physical address
- * @param access to distinguish between fetching instructions and reading/writing data
- * @param l1_cache pointer to the beginning of L1 CACHE
- * @param l2_cache pointer to the beginning of L2 CACHE
- * @param word pointer to the word of data that is returned by cache
- * @param replace replacement policy
- * @return error code
- */
 int cache_read(const void * mem_space,
                phy_addr_t * paddr,
                mem_access_t access,
@@ -395,8 +350,6 @@ int cache_read(const void * mem_space,
     M_REQUIRE(access == INSTRUCTION || access == DATA, ERR_BAD_PARAMETER, "%s", "Non existing access type");
     M_REQUIRE(replace == LRU, ERR_BAD_PARAMETER, "%s", "Non existing replacement policy");
 
-    // TODO add address verification
-
     uint8_t hit_way;
     uint16_t hit_index;
     const uint32_t* p_line;
@@ -406,7 +359,7 @@ int cache_read(const void * mem_space,
     uint16_t l1_cache_line_index = extract_l1_line_select(phy_addr);
     uint16_t l2_cache_line_index = extract_l2_line_select(phy_addr);
 
-    debug_print("%s", "============ cache_read() ============");
+    debug_print("%s", "======================== cache_read() =========================");
 
     // *** Searching Level 1 Cache ***
     debug_print("%s", "Searching Level 1 Cache");
@@ -487,6 +440,9 @@ int cache_read(const void * mem_space,
     return ERR_NONE;
 }
 
+// #define M_CHECK_AGES
+//     foreach_way()
+
 /**
  * @brief Looks for an empty way in the l1_cache. If found return the empty_way. 
  *        Otherwise, will perform the required eviction from the l1_cache in order
@@ -530,6 +486,7 @@ static inline int find_or_make_empty_way( // TODO Handle errors
         
         // Make a copy of the l1_entry to evict
         l1_icache_entry_t l1_old_entry = *(cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, l1_insert_way));
+        // PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, l1_insert_way, 4);
 
         int l2_insert_way = find_empty_way(l2_cache, L2_CACHE, l2_cache_line_index);
         uint8_t l2_cold_start = (l2_insert_way != -1);
@@ -547,6 +504,11 @@ static inline int find_or_make_empty_way( // TODO Handle errors
                 }
             }
             l2_insert_way = way_max;
+        }
+
+        debug_print("%s", "================= L2 WAYS - Before =================");
+        foreach_way(i, L2_CACHE_WAYS) {
+            PRINT_CACHE_LINE(stderr, l2_cache_entry_t, L2_CACHE_WAYS, l2_cache_line_index, i, 4);
         }
         
         // === Creating new l2_entry from evicted l1_entry ===
@@ -566,6 +528,11 @@ static inline int find_or_make_empty_way( // TODO Handle errors
             }
         }
         // ******
+
+        debug_print("%s", "================= L2 WAYS - After =================");
+        foreach_way(i, L2_CACHE_WAYS) {
+            PRINT_CACHE_LINE(stderr, l2_cache_entry_t, L2_CACHE_WAYS, l2_cache_line_index, i, 4);
+        }
     }
 
     *insert_way = l1_insert_way;
