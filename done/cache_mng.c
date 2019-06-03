@@ -58,8 +58,8 @@ static inline int find_or_make_empty_way(
         void * l1_cache, 
         cache_t l1_cache_type, 
         void * l2_cache, 
+        uint32_t l1_entry_tag,
         uint16_t l1_cache_line_index,
-        uint16_t l2_cache_line_index,
         cache_replace_t replace,
         uint8_t* bool_cold_start,
         uint8_t* insert_way);
@@ -435,7 +435,7 @@ int cache_read(const void * mem_space,
     debug_print("%s", "Inserting new_entry");
     uint8_t cold_start;
     uint8_t empty_way;
-    M_EXIT_IF_ERR_NOMSG(find_or_make_empty_way(l1_cache, L1_ICACHE, l2_cache, l1_cache_line_index, l2_cache_line_index, replace, &cold_start, &empty_way));
+    M_EXIT_IF_ERR_NOMSG(find_or_make_empty_way(l1_cache, L1_ICACHE, l2_cache, extract_tag(phy_addr, L1_ICACHE), l1_cache_line_index, replace, &cold_start, &empty_way));
 
     debug_print("%s %d", "empty way: ", empty_way);
     void * cache = l1_cache;
@@ -535,21 +535,21 @@ int cache_write(void * mem_space,
     uint32_t phy_addr = get_addr(paddr);
     M_REQUIRE(phy_addr % L1_ICACHE_WORDS_PER_LINE == 0, ERR_BAD_PARAMETER, "%s", "paddr is not aligned");
     
-    // === Searching L1_DCACHE ===
-    M_EXIT_ERR_NOMSG(cache_hit(mem_space, l1_cache, paddr, (const uint32_t**) &p_line, &hit_way, &hit_index, L1_DCACHE));
-    if (hit_way != HIT_WAY_MISS) {
-        uint8_t word_index = extract_word_select(phy_addr);
-        p_line[word_index] = *word;
-        recompute_ages(l1_cache, L1_DCACHE, hit_index, hit_way, 0, replace);
-        write_though(mem_space, phy_addr, p_line);
-    }
-    // ==========Check L2_CACHE========
-    M_EXIT_ERR_NOMSG(CACHE_HIT(mem_space, l2_cache, paddr, (const uint32_t**) &p_line, &hit_way, &hit_index, L2_CACHE));
-    if(hit_way  != HIT_WAY_MISS) {
-        uint8_t word_index = extract_word_select(phy_addr);
-        p_line[word_index] = *word;
-        recompute_ages(l2_cache, L2_CACHE, hit_index, hit_way, 0, replace);
-    } 
+    // // === Searching L1_DCACHE ===
+    // M_EXIT_ERR_NOMSG(cache_hit(mem_space, l1_cache, paddr, (const uint32_t**) &p_line, &hit_way, &hit_index, L1_DCACHE));
+    // if (hit_way != HIT_WAY_MISS) {
+    //     uint8_t word_index = extract_word_select(phy_addr);
+    //     p_line[word_index] = *word;
+    //     recompute_ages(l1_cache, L1_DCACHE, hit_index, hit_way, 0, replace);
+    //     write_though(mem_space, phy_addr, p_line);
+    // }
+    // // ==========Check L2_CACHE========
+    // M_EXIT_ERR_NOMSG(CACHE_HIT(mem_space, l2_cache, paddr, (const uint32_t**) &p_line, &hit_way, &hit_index, L2_CACHE));
+    // if(hit_way  != HIT_WAY_MISS) {
+    //     uint8_t word_index = extract_word_select(phy_addr);
+    //     p_line[word_index] = *word;
+    //     recompute_ages(l2_cache, L2_CACHE, hit_index, hit_way, 0, replace);
+    // } 
 
 
 
@@ -704,14 +704,12 @@ static inline uint8_t find_oldest_way(void* cache, cache_t cache_type, uint16_t 
 static inline int find_or_make_empty_way( // TODO Handle errors
         void * l1_cache, 
         cache_t l1_cache_type, 
-        void * l2_cache, 
+        void * l2_cache,
+        uint32_t l1_entry_tag,
         uint16_t l1_cache_line_index,
-        uint16_t l2_cache_line_index,
         cache_replace_t replace,
         uint8_t* bool_cold_start,
         uint8_t* insert_way) {
-
-    l2_cache_line_index = -1;
 
     int l1_insert_way = find_empty_way(l1_cache, L1_ICACHE, l1_cache_line_index);
     uint8_t l1_cold_start = (l1_insert_way != -1);
@@ -726,18 +724,17 @@ static inline int find_or_make_empty_way( // TODO Handle errors
         // Make a copy of the l1_entry to evict
         void* cache = l1_cache;
         l1_icache_entry_t l1_old_entry = *(cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, l1_insert_way));
-        // debug_print("*** Moving evicted entry to l2_cache ***%s", "");
-        // debug_print("\tl1_cache_line_index = %x", l1_cache_line_index);
-        // debug_print("\textracted_piece_of_tag = %x", extractBits32(l1_old_entry.tag, 0, 3));
-        // debug_print("%x", extractBits32(l1_old_entry.tag, 0, 3) << 6 | l1_cache_line_index);
-        l2_cache_line_index = extractBits32(l1_old_entry.tag, 0, 3) << 6 | l1_cache_line_index;
+        // l2_cache_line_index = extractBits32(l1_old_entry.tag, 0, 3) << 6 | l1_cache_line_index;
+        uint32_t l2_tag; uint16_t l2_line;
+        L1_LINETAG_TO_L2_LINETAG(l1_entry_tag, l1_cache_line_index, l2_tag, l2_line);
+
         // PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, l1_insert_way, 4);
 
-        int l2_insert_way = find_empty_way(l2_cache, L2_CACHE, l2_cache_line_index);
+        int l2_insert_way = find_empty_way(l2_cache, L2_CACHE, l2_line);
         uint8_t l2_cold_start = (l2_insert_way != -1);
 
         if (!l2_cold_start) {
-            l2_insert_way = find_oldest_way(l2_cache, L2_CACHE, l2_cache_line_index);
+            l2_insert_way = find_oldest_way(l2_cache, L2_CACHE, l2_line);
         }
 
         // debug_print("%s", "================= L2 WAYS - Before =================");
@@ -749,13 +746,13 @@ static inline int find_or_make_empty_way( // TODO Handle errors
         cache = l2_cache;
         l2_cache_entry_t l2_new_entry;
         l2_new_entry.v = 1;
-        l2_new_entry.tag = l1_old_entry.tag >> (L1_ICACHE_TAG_BITS - L2_CACHE_TAG_BITS);
-        l2_new_entry.age = cache_age(l2_cache_entry_t, L2_CACHE_WAYS, l2_cache_line_index, l2_insert_way);
+        l2_new_entry.tag = l2_tag;
+        l2_new_entry.age = cache_age(l2_cache_entry_t, L2_CACHE_WAYS, l2_line, l2_insert_way);
         memcpy(l2_new_entry.line, l1_old_entry.line, sizeof(word_t) * L1_ICACHE_WORDS_PER_LINE);
         // ======
 
-        cache_insert(l2_cache_line_index, l2_insert_way, &l2_new_entry, l2_cache, L2_CACHE);
-        recompute_ages(cache, L2_CACHE, l2_cache_line_index, l2_insert_way, l2_cold_start, replace);
+        cache_insert(l2_line, l2_insert_way, &l2_new_entry, l2_cache, L2_CACHE);
+        recompute_ages(cache, L2_CACHE, l2_line, l2_insert_way, l2_cold_start, replace);
         // ******
 
         // debug_print("%s", "================= L2 WAYS - After =================");
