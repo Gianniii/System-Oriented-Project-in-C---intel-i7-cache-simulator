@@ -603,18 +603,6 @@ int cache_read(const void * mem_space,
     return ERR_NONE;
 }
 
-/**
- * @brief Ask cache for a byte of data. Endianess: LITTLE.
- *
- * @param mem_space pointer to the memory space
- * @param p_addr pointer to a physical address
- * @param access to distinguish between fetching instructions and reading/writing data
- * @param l1_cache pointer to the beginning of L1 CACHE
- * @param l2_cache pointer to the beginning of L2 CACHE
- * @param byte pointer to the byte to be returned
- * @param replace replacement policy
- * @return error code
- */
 int cache_read_byte(const void * mem_space,
                     phy_addr_t * p_paddr,
                     mem_access_t access,
@@ -640,18 +628,6 @@ int cache_read_byte(const void * mem_space,
     return ERR_NONE;
 }
 
-/**
- * @brief Change a word of data in the cache.
- *  Exclusive policy (see cache_read)
- *
- * @param mem_space pointer to the memory space
- * @param paddr pointer to a physical address
- * @param l1_cache pointer to the beginning of L1 CACHE
- * @param l2_cache pointer to the beginning of L2 CACHE
- * @param word const pointer to the word of data that is to be written to the cache
- * @param replace replacement policy
- * @return error code
- */
 int cache_write(void * mem_space,
                 phy_addr_t * paddr,
                 void * l1_cache,
