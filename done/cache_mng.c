@@ -109,23 +109,23 @@ static inline int find_empty_way(void * cache, cache_t cache_type, uint16_t cach
  * @param stop bit index/placeholder till which to clip
  * @return the right justified extracted u_int bitstring
  */
-uint32_t extractBits32(uint32_t sample, const uint8_t start, const uint8_t stop) {
+static inline uint32_t extractBits32(uint32_t sample, const uint8_t start, const uint8_t stop) {
     return (sample << (32 - stop)) >> (32 - stop + start);
 }
 
-uint8_t extract_byte_select(uint32_t phy_addr) {
+static inline uint8_t extract_byte_select(uint32_t phy_addr) {
     return extractBits32(phy_addr, L1_PHY_ADDR_BYTE_INDEX, L1_PHY_ADDR_WORD_INDEX);
 }
 
-uint8_t extract_word_select(uint32_t phy_addr) {
+static inline uint8_t extract_word_select(uint32_t phy_addr) {
     return extractBits32(phy_addr, L1_PHY_ADDR_WORD_INDEX, L1_PHY_ADDR_LINE_INDEX);
 }
 
-uint16_t extract_l1_line_select(uint32_t phy_addr) {
+static inline uint16_t extract_l1_line_select(uint32_t phy_addr) {
     return extractBits32(phy_addr, L1_PHY_ADDR_LINE_INDEX, L1_PHY_ADDR_TAG_INDEX);
 }
 
-uint16_t extract_l2_line_select(uint32_t phy_addr) {
+static inline uint16_t extract_l2_line_select(uint32_t phy_addr) {
     return extractBits32(phy_addr, 4, 13); // TODO no magic
 }
 
@@ -435,11 +435,11 @@ int cache_read(const void * mem_space,
     void * cache = l1_cache;
     l1_new_entry.age = cache_age(l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, empty_way);
 
-    debug_print("%s", "================= Before =================");
-    foreach_way(i, L1_ICACHE_WAYS) {
-        PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
-    }
-    debug_print("%s", "=========================================");
+    // debug_print("%s", "================= Before =================");
+    // foreach_way(i, L1_ICACHE_WAYS) {
+    //     PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
+    // }
+    // debug_print("%s", "=========================================");
     M_EXIT_IF_ERR_NOMSG(cache_insert(l1_cache_line_index, empty_way, &l1_new_entry, l1_cache, L1_ICACHE)); // TODO Handle error
     // debug_print("%s", "================= After Insert =================");
     // foreach_way(i, L1_ICACHE_WAYS) {
@@ -448,11 +448,11 @@ int cache_read(const void * mem_space,
     // debug_print("%s", "=========================================");
     recompute_ages(l1_cache, L1_ICACHE, l1_cache_line_index, empty_way, cold_start, replace);
 
-    debug_print("%s", "================= After =================");
-    foreach_way(i, L1_ICACHE_WAYS) {
-        PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
-    }
-    debug_print("%s", "=========================================");
+    // debug_print("%s", "================= After =================");
+    // foreach_way(i, L1_ICACHE_WAYS) {
+    //     PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
+    // }
+    // debug_print("%s", "=========================================");
 
     // debug_print("%d", extract_word_select(phy_addr));
     // PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, empty_way, 4);
@@ -551,10 +551,10 @@ static inline int find_or_make_empty_way( // TODO Handle errors
         // Make a copy of the l1_entry to evict
         void* cache = l1_cache;
         l1_icache_entry_t l1_old_entry = *(cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, l1_insert_way));
-        debug_print("*** Moving evicted entry to l2_cache ***%s", "");
-        debug_print("\tl1_cache_line_index = %x", l1_cache_line_index);
-        debug_print("\textracted_piece_of_tag = %x", extractBits32(l1_old_entry.tag, 0, 3));
-        debug_print("%x", extractBits32(l1_old_entry.tag, 0, 3) << 6 | l1_cache_line_index);
+        // debug_print("*** Moving evicted entry to l2_cache ***%s", "");
+        // debug_print("\tl1_cache_line_index = %x", l1_cache_line_index);
+        // debug_print("\textracted_piece_of_tag = %x", extractBits32(l1_old_entry.tag, 0, 3));
+        // debug_print("%x", extractBits32(l1_old_entry.tag, 0, 3) << 6 | l1_cache_line_index);
         l2_cache_line_index = extractBits32(l1_old_entry.tag, 0, 3) << 6 | l1_cache_line_index;
         // PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, l1_insert_way, 4);
 
