@@ -251,8 +251,8 @@ int cache_insert(uint16_t cache_line_index,
               ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
 
     #define M_CACHE_INSERT(m_cache_type) \
-        M_REQUIRE(cache_line_index < m_cache_type ## _LINES, ERR_BAD_PARAMETER, "%s", "cache_line_index out of bounds"); \
-        M_REQUIRE(cache_way < m_cache_type ## _WAYS, ERR_BAD_PARAMETER, "%s", "cache_way out of bounds"); \
+        M_REQUIRE(cache_line_index < m_cache_type ## _LINES, ERR_BAD_PARAMETER, "cache_line_index out of bounds. cache_line=%d", cache_line_index); \
+        M_REQUIRE(cache_way < m_cache_type ## _WAYS, ERR_BAD_PARAMETER, "cache_way out of bounds. cache_way=%d", cache_way); \
         M_CACHE_ENTRY_T(m_cache_type)* cache_line = cache_entry(M_CACHE_ENTRY_T(m_cache_type), m_cache_type ## _WAYS, cache_line_index, cache_way); \
         *cache_line = *((M_CACHE_ENTRY_T(m_cache_type)*) cache_line_in);
 
@@ -440,24 +440,24 @@ int cache_read(const void * mem_space,
     void * cache = l1_cache;
     l1_new_entry.age = cache_age(l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, empty_way);
 
-    // debug_print("%s", "================= Before =================");
-    // foreach_way(i, L1_ICACHE_WAYS) {
-    //     PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
-    // }
-    // debug_print("%s", "=========================================");
+    debug_print("%s", "================= Before =================");
+    foreach_way(i, L1_ICACHE_WAYS) {
+        PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
+    }
+    debug_print("%s", "=========================================");
     M_EXIT_IF_ERR_NOMSG(cache_insert(l1_cache_line_index, empty_way, &l1_new_entry, l1_cache, L1_ICACHE)); // TODO Handle error
-    // debug_print("%s", "================= After Insert =================");
-    // foreach_way(i, L1_ICACHE_WAYS) {
-    //     PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
-    // }
-    // debug_print("%s", "=========================================");
+    debug_print("%s", "================= After Insert =================");
+    foreach_way(i, L1_ICACHE_WAYS) {
+        PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
+    }
+    debug_print("%s", "=========================================");
     recompute_ages(l1_cache, L1_ICACHE, l1_cache_line_index, empty_way, cold_start, replace);
 
-    // debug_print("%s", "================= After =================");
-    // foreach_way(i, L1_ICACHE_WAYS) {
-    //     PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
-    // }
-    // debug_print("%s", "=========================================");
+    debug_print("%s", "================= After =================");
+    foreach_way(i, L1_ICACHE_WAYS) {
+        PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
+    }
+    debug_print("%s", "=========================================");
 
     debug_print("%d", extract_word_select(phy_addr));
     // PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, empty_way, 4);
