@@ -192,6 +192,13 @@ int cache_dump(FILE* output, const void* cache, cache_t cache_type) {
     return ERR_NONE;
 }
 
+#define ZERO_4_LSBS 0xFFFFFFF0
+static inline word_t* find_line_in_mem(const void* mem_space, uint32_t phy_addr) {
+    uint32_t alligned_phy_addr = phy_addr & ZERO_4_LSBS;
+    return (word_t*) mem_space + alligned_phy_addr/sizeof(word_t);
+}
+#undef ZERO_4_LSBS
+
 int cache_entry_init(const void * mem_space,
                      const phy_addr_t * paddr,
                      void * cache_entry,
@@ -205,10 +212,9 @@ int cache_entry_init(const void * mem_space,
     uint32_t phy_addr = get_addr(paddr);
 
     uint32_t tag;
-    uint32_t alligned_phy_addr = phy_addr & 0xFFFFFFF0; //set 4 msb bits to 0 so that it is a multiple of 16
-    
-    const word_t* start = (const word_t*)mem_space + alligned_phy_addr/sizeof(word_t);
-    
+
+    const word_t* start = find_line_in_mem(mem_space, phy_addr);
+
     #define M_CACHE_ENTRY_INIT(m_cache_type) \
         tag = phy_addr >> m_cache_type ## _TAG_REMAINING_BITS; \
         M_CACHE_ENTRY_T(m_cache_type)* cast_entry = (M_CACHE_ENTRY_T(m_cache_type)*)cache_entry; \
