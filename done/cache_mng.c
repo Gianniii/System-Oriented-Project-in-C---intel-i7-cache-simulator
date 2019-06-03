@@ -461,6 +461,92 @@ int cache_read(const void * mem_space,
     return ERR_NONE;
 }
 
+/**
+ * @brief Ask cache for a byte of data. Endianess: LITTLE.
+ *
+ * @param mem_space pointer to the memory space
+ * @param p_addr pointer to a physical address
+ * @param access to distinguish between fetching instructions and reading/writing data
+ * @param l1_cache pointer to the beginning of L1 CACHE
+ * @param l2_cache pointer to the beginning of L2 CACHE
+ * @param byte pointer to the byte to be returned
+ * @param replace replacement policy
+ * @return error code
+ */
+int cache_read_byte(const void * mem_space,
+                    phy_addr_t * p_paddr,
+                    mem_access_t access,
+                    void * l1_cache,
+                    void * l2_cache,
+                    uint8_t * p_byte,
+                    cache_replace_t replace) {
+    M_REQUIRE_NON_NULL(mem_space);
+    M_REQUIRE_NON_NULL(p_paddr);
+    M_REQUIRE_NON_NULL(l1_cache);
+    M_REQUIRE_NON_NULL(l2_cache);
+    M_REQUIRE_NON_NULL(p_byte);
+    M_REQUIRE(access == INSTRUCTION || access == DATA, ERR_BAD_PARAMETER, "%s", "Non existing access type");
+    M_REQUIRE(replace == LRU, ERR_BAD_PARAMETER, "%s", "Non existing replacement policy");
+
+    phy_addr_t paddr = *p_paddr;
+    paddr.page_offset = (p_paddr->page_offset - (p_paddr->page_offset % sizeof(word_t)));
+    word_t word;
+    cache_read(mem_space, &paddr, access, l1_cache, l2_cache, &word, replace);
+
+    *p_byte = ((byte_t*)(&word))[p_paddr->page_offset % sizeof(word_t)];
+
+    return ERR_NONE;
+}
+
+
+/**
+ * @brief Change a word of data in the cache.
+ *  Exclusive policy (see cache_read)
+ *
+ * @param mem_space pointer to the memory space
+ * @param paddr pointer to a physical address
+ * @param l1_cache pointer to the beginning of L1 CACHE
+ * @param l2_cache pointer to the beginning of L2 CACHE
+ * @param word const pointer to the word of data that is to be written to the cache
+ * @param replace replacement policy
+ * @return error code
+ */
+int cache_write(void * mem_space,
+                phy_addr_t * paddr,
+                void * l1_cache,
+                void * l2_cache,
+                const uint32_t * word,
+                cache_replace_t replace) {
+
+    M_REQUIRE_NON_NULL(mem_space);
+    M_REQUIRE_NON_NULL(paddr);
+    M_REQUIRE_NON_NULL(l1_cache);
+    M_REQUIRE_NON_NULL(l2_cache);    
+
+    return ERR_NONE;
+}
+
+
+/**
+ * @brief Write to cache a byte of data. Endianess: LITTLE.
+ *
+ * @param mem_space pointer to the memory space
+ * @param paddr pointer to a physical address
+ * @param l1_cache pointer to the beginning of L1 ICACHE
+ * @param l2_cache pointer to the beginning of L2 CACHE
+ * @param p_byte pointer to the byte to be returned
+ * @param replace replacement policy
+ * @return error code
+ */
+int cache_write_byte(void * mem_space,
+                     phy_addr_t * paddr,
+                     void * l1_cache,
+                     void * l2_cache,
+                     uint8_t p_byte,
+                     cache_replace_t replace) {
+    return ERR_NONE;
+}               
+
 static inline int recompute_ages(void* cache, cache_t cache_type, uint16_t cache_line, uint8_t way_index, uint8_t bool_cold_start, cache_replace_t replace) {
     if (cache_type == L1_ICACHE || cache_type == L1_DCACHE) {
         if (replace == LRU) {
@@ -593,89 +679,3 @@ static inline int find_or_make_empty_way( // TODO Handle errors
     *bool_cold_start = l1_cold_start;
     return ERR_NONE;
 }
-
-/**
- * @brief Ask cache for a byte of data. Endianess: LITTLE.
- *
- * @param mem_space pointer to the memory space
- * @param p_addr pointer to a physical address
- * @param access to distinguish between fetching instructions and reading/writing data
- * @param l1_cache pointer to the beginning of L1 CACHE
- * @param l2_cache pointer to the beginning of L2 CACHE
- * @param byte pointer to the byte to be returned
- * @param replace replacement policy
- * @return error code
- */
-int cache_read_byte(const void * mem_space,
-                    phy_addr_t * p_paddr,
-                    mem_access_t access,
-                    void * l1_cache,
-                    void * l2_cache,
-                    uint8_t * p_byte,
-                    cache_replace_t replace) {
-    M_REQUIRE_NON_NULL(mem_space);
-    M_REQUIRE_NON_NULL(p_paddr);
-    M_REQUIRE_NON_NULL(l1_cache);
-    M_REQUIRE_NON_NULL(l2_cache);
-    M_REQUIRE_NON_NULL(p_byte);
-    M_REQUIRE(access == INSTRUCTION || access == DATA, ERR_BAD_PARAMETER, "%s", "Non existing access type");
-    M_REQUIRE(replace == LRU, ERR_BAD_PARAMETER, "%s", "Non existing replacement policy");
-
-    phy_addr_t paddr = *p_paddr;
-    paddr.page_offset = (p_paddr->page_offset - (p_paddr->page_offset % sizeof(word_t)));
-    word_t word;
-    cache_read(mem_space, &paddr, access, l1_cache, l2_cache, &word, replace);
-
-    *p_byte = ((byte_t*)(&word))[p_paddr->page_offset % sizeof(word_t)];
-
-    return ERR_NONE;
-}
-
-
-/**
- * @brief Change a word of data in the cache.
- *  Exclusive policy (see cache_read)
- *
- * @param mem_space pointer to the memory space
- * @param paddr pointer to a physical address
- * @param l1_cache pointer to the beginning of L1 CACHE
- * @param l2_cache pointer to the beginning of L2 CACHE
- * @param word const pointer to the word of data that is to be written to the cache
- * @param replace replacement policy
- * @return error code
- */
-int cache_write(void * mem_space,
-                phy_addr_t * paddr,
-                void * l1_cache,
-                void * l2_cache,
-                const uint32_t * word,
-                cache_replace_t replace) {
-
-    M_REQUIRE_NON_NULL(mem_space);
-    M_REQUIRE_NON_NULL(paddr);
-    M_REQUIRE_NON_NULL(l1_cache);
-    M_REQUIRE_NON_NULL(l2_cache);    
-
-    return ERR_NONE;
-}
-
-
-/**
- * @brief Write to cache a byte of data. Endianess: LITTLE.
- *
- * @param mem_space pointer to the memory space
- * @param paddr pointer to a physical address
- * @param l1_cache pointer to the beginning of L1 ICACHE
- * @param l2_cache pointer to the beginning of L2 CACHE
- * @param p_byte pointer to the byte to be returned
- * @param replace replacement policy
- * @return error code
- */
-int cache_write_byte(void * mem_space,
-                     phy_addr_t * paddr,
-                     void * l1_cache,
-                     void * l2_cache,
-                     uint8_t p_byte,
-                     cache_replace_t replace) {
-    return ERR_NONE;
-}               
