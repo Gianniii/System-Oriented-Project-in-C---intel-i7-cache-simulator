@@ -556,6 +556,52 @@ int cache_write(void * mem_space,
     return ERR_NONE;
 }
 
+#define L1_LINETAG_TO_L2_LINETAG(IN_L1_TAG, IN_L1_LINE, OUT_L2_TAG, OUT_L2_LINE) \
+    do { \
+        OUT_L2_TAG = extractBits32(IN_L1_TAG, 0, L2_CACHE_TAG_BITS); \
+        OUT_L2_LINE = (extractBits32(IN_L1_TAG, 0, 3) << 6) | IN_L1_LINE; \
+    } while(0)
+
+#define L2_LINETAG_TO_L1_LINETAG(IN_L2_TAG, IN_L2_LINE, OUT_L1_TAG, OUT_L1_LINE) \
+    do { \
+        OUT_L1_TAG = (IN_L2_TAG << 3) | extractBits32(IN_L2_LINE, 6, 9); \
+        OUT_L1_LINE = extractBits32(IN_L2_LINE, 0, 6); \
+    } while(0)
+
+#define TRANSFER_ENTRY_INFO(DEST_ENTRY, SRC_ENTRY, DEST_TAG) \
+    do { \
+        DEST_ENTRY->v = 1; \
+        DEST_ENTRY->tag = DEST_TAG; \
+        memcpy(DEST_ENTRY->line, SRC_ENTRY->line, sizeof(word_t) * L1_DCACHE_WORDS_PER_LINE); \
+    } while(0)
+
+static inline move_to_l2_from_l1(void* dest_l2_cache, void* src_l1_cache, uint32_t src_l1_tag, uint16_t src_l1_line, uint8_t src_l1_way, uint8_t dest_l1_way) {
+    uint32_t dest_l2_tag; uint16_t dest_l2_line;
+    L1_LINETAG_TO_L2_LINETAG(src_l1_line, src_l1_tag, dest_l2_tag, dest_l2_line);
+
+    void* cache = src_l1_cache;
+    l1_icache_entry_t* src_l1_entry = cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, src_l1_line, src_l1_way);
+    cache = dest_l2_cache;
+    l2_cache_entry_t* dest_l2_entry = cache_entry(l2_cache_entry_t, L2_CACHE_WAYS, dest_l2_line, dest_l1_way);
+    TRANSFER_ENTRY_INFO(dest_l2_entry, src_l1_entry, dest_l2_tag);
+}
+
+static inline move_to_l1_from_l2(void* dest_l2_cache, void* src_l1_cache, uint32_t src_l1_tag, uint16_t src_l1_line, uint8_t src_l1_way, uint8_t dest_l1_way) {
+    uint32_t dest_l2_tag; uint16_t dest_l2_line;
+    L1_LINETAG_TO_L2_LINETAG(src_l1_line, src_l1_tag, dest_l2_tag, dest_l2_line);
+
+    void* cache = src_l1_cache;
+    l1_icache_entry_t* src_l1_entry = cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, src_l1_line, src_l1_way);
+    cache = dest_l2_cache;
+    l2_cache_entry_t* dest_l2_entry = cache_entry(l2_cache_entry_t, L2_CACHE_WAYS, dest_l2_line, dest_l1_way);
+    TRANSFER_ENTRY_INFO(dest_l2_entry, src_l1_entry, dest_l2_tag);
+}
+
+// static inline void write_though(void* mem_space, uint32_t phy_addr, const uint32_t* p_line) {
+//     word_t* start = find_line_in_mem(mem_space, phy_addr);
+//     memcpy(start, p_line, sizeof(word_t) * L1_ICACHE_WORDS_PER_LINE);
+// }
+
 
 /**
  * @brief Write to cache a byte of data. Endianess: LITTLE.
