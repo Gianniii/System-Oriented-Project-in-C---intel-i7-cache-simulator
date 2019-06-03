@@ -361,6 +361,28 @@ int cache_read(const void * mem_space,
 
     debug_print("%s", "======================== cache_read() =========================");
 
+    {
+        void * cache = l1_cache;
+        l1_icache_entry_t entries[16];
+        memset(entries, 0, sizeof(l1_icache_entry_t) * 16);
+        foreach_way(i, L1_ICACHE_WAYS) {
+            entries[i] = *cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i);
+        }
+        foreach_way(i, L1_ICACHE_WAYS) {
+            if (entries[i].v) {
+                foreach_way(j, L1_ICACHE_WAYS) {
+                    if (entries[j].v && j != i && entries[i].age == entries[j].age) {
+                        debug_print("%s", "====================================================BAD!=============================================");
+                        foreach_way(i, L1_ICACHE_WAYS) {
+                            PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
+                        }
+                        M_EXIT_ERR_NOMSG(ERR_BAD_PARAMETER);
+                    }
+                }
+            }
+        }
+    }
+
     // *** Searching Level 1 Cache ***
     debug_print("%s", "Searching Level 1 Cache");
     if (1) { // access == INSTRUCTION
