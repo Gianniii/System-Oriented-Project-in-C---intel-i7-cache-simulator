@@ -132,6 +132,9 @@ int tlb_search( const void * mem_space,
 	M_REQUIRE_NON_NULL(l1_itlb);
 	M_REQUIRE_NON_NULL(l1_dtlb);
 	M_REQUIRE_NON_NULL(l2_tlb);
+	M_REQUIRE_NON_NULL(hit_or_miss);
+	
+	
 
 	// *** Searching L1 ***
 
@@ -180,22 +183,22 @@ int tlb_search( const void * mem_space,
 		M_EXIT_IF_ERR_NOMSG(tlb_entry_init(vaddr, paddr, &new_l1i_entry, L1_ITLB));
 		M_EXIT_IF_ERR_NOMSG(tlb_insert(vpn % L1_ITLB_LINES, &new_l1i_entry, l1_itlb, L1_ITLB));
 
-		if (old_l2_entry->v) { // Invalidate old entry if needed
-			l1_dtlb_entry_t* curr_l1d_entry = l1_dtlb + (vpn % L1_DTLB_LINES);
-			if (curr_l1d_entry->v && (curr_l1d_entry->phy_page_num == old_l2_entry->phy_page_num)) {
-				curr_l1d_entry->v = 0;
-			}
+		//invalidate old entry 
+		l1_dtlb_entry_t* curr_l1d_entry = l1_dtlb + (vpn % L1_DTLB_LINES);
+		if (curr_l1d_entry->v && (curr_l1d_entry->phy_page_num == old_l2_entry->phy_page_num)) {
+			curr_l1d_entry->v = 0;
+			
 		}
 	} else {
 		l1_dtlb_entry_t new_l1d_entry;
 		M_EXIT_IF_ERR_NOMSG(tlb_entry_init(vaddr, paddr, &new_l1d_entry, L1_DTLB));
 		M_EXIT_IF_ERR_NOMSG(tlb_insert(vpn % L1_DTLB_LINES, &new_l1d_entry, l1_dtlb, L1_DTLB));
 
-		if (old_l2_entry->v) { // Invalidate old entry if needed
-			l1_itlb_entry_t* curr_l1i_entry = l1_itlb + (vpn % L1_ITLB_LINES);
-			if (curr_l1i_entry->v && (curr_l1i_entry->phy_page_num == old_l2_entry->phy_page_num)) {
-				curr_l1i_entry->v = 0;
-			}
+		//invalidate old entry 
+		l1_itlb_entry_t* curr_l1i_entry = l1_itlb + (vpn % L1_ITLB_LINES);
+		if (curr_l1i_entry->v && (curr_l1i_entry->phy_page_num == old_l2_entry->phy_page_num)) {
+			curr_l1i_entry->v = 0;
+			
 		}
 	}
 
