@@ -429,17 +429,17 @@ int cache_read(const void * mem_space,
     void * cache = l1_cache;
     l1_new_entry.age = cache_age(l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, empty_way);
 
-    debug_print("%s", "================= Before =================");
-    foreach_way(i, L1_ICACHE_WAYS) {
-        PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
-    }
-    debug_print("%s", "=========================================");
+    // debug_print("%s", "================= Before =================");
+    // foreach_way(i, L1_ICACHE_WAYS) {
+    //     PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
+    // }
+    // debug_print("%s", "=========================================");
     M_EXIT_IF_ERR_NOMSG(cache_insert(l1_cache_line_index, empty_way, &l1_new_entry, l1_cache, L1_ICACHE)); // TODO Handle error
-    debug_print("%s", "================= After Insert =================");
-    foreach_way(i, L1_ICACHE_WAYS) {
-        PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
-    }
-    debug_print("%s", "=========================================");
+    // debug_print("%s", "================= After Insert =================");
+    // foreach_way(i, L1_ICACHE_WAYS) {
+    //     PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
+    // }
+    // debug_print("%s", "=========================================");
     if (replace == LRU) {
         if (cold_start) {
             debug_print("cold_start = %d \tage_increase", cold_start);
@@ -449,11 +449,11 @@ int cache_read(const void * mem_space,
             LRU_age_update(l1_icache_entry_t, L1_ICACHE_WAYS, empty_way, l1_cache_line_index);
         }
     }
-    debug_print("%s", "================= After =================");
-    foreach_way(i, L1_ICACHE_WAYS) {
-        PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
-    }
-    debug_print("%s", "=========================================");
+    // debug_print("%s", "================= After =================");
+    // foreach_way(i, L1_ICACHE_WAYS) {
+    //     PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
+    // }
+    // debug_print("%s", "=========================================");
 
     debug_print("%d", extract_word_select(phy_addr));
     // PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, empty_way, 4);
@@ -482,6 +482,8 @@ static inline int find_or_make_empty_way( // TODO Handle errors
         uint8_t* bool_cold_start,
         uint8_t* insert_way) {
 
+    l2_cache_line_index = -1;
+
     int l1_insert_way = find_empty_way(l1_cache, L1_ICACHE, l1_cache_line_index);
     uint8_t l1_cold_start = (l1_insert_way != -1);
 
@@ -494,7 +496,7 @@ static inline int find_or_make_empty_way( // TODO Handle errors
             debug_print("%s", "--- Searching L1 Cache ---");
             foreach_way(i, L1_ICACHE_WAYS) {
                 uint8_t age = cache_age(l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i);
-                PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
+                // PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
                 if (max < age) {
                     max = age;
                     way_max = i;
@@ -508,6 +510,11 @@ static inline int find_or_make_empty_way( // TODO Handle errors
         
         // Make a copy of the l1_entry to evict
         l1_icache_entry_t l1_old_entry = *(cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, l1_insert_way));
+        debug_print("Stuff %s", "");
+        debug_print("%x", l1_cache_line_index);
+        debug_print("%x", extractBits32(l1_old_entry.tag, 0, 4) << 6);
+        debug_print("%x", extractBits32(l1_old_entry.tag, 0, 4) << 6 | l1_cache_line_index);
+        l2_cache_line_index = extractBits32(l1_old_entry.tag, 0, 4) << 6 | l1_cache_line_index;
         // PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, l1_insert_way, 4);
 
         int l2_insert_way = find_empty_way(l2_cache, L2_CACHE, l2_cache_line_index);
@@ -528,11 +535,10 @@ static inline int find_or_make_empty_way( // TODO Handle errors
             l2_insert_way = way_max;
         }
 
-        debug_print("%s", "================= L2 WAYS - Before =================");
-        foreach_way(i, L2_CACHE_WAYS) {
-            PRINT_CACHE_LINE(stderr, l2_cache_entry_t, L2_CACHE_WAYS, l2_cache_line_index, i, 4);
-        }
-        
+        // debug_print("%s", "================= L2 WAYS - Before =================");
+        // foreach_way(i, L2_CACHE_WAYS) {
+        //     PRINT_CACHE_LINE(stderr, l2_cache_entry_t, L2_CACHE_WAYS, l2_cache_line_index, i, 4);
+        // }
         // === Creating new l2_entry from evicted l1_entry ===
         l2_cache_entry_t l2_new_entry;
         l2_new_entry.v = 1;
@@ -551,10 +557,10 @@ static inline int find_or_make_empty_way( // TODO Handle errors
         }
         // ******
 
-        debug_print("%s", "================= L2 WAYS - After =================");
-        foreach_way(i, L2_CACHE_WAYS) {
-            PRINT_CACHE_LINE(stderr, l2_cache_entry_t, L2_CACHE_WAYS, l2_cache_line_index, i, 4);
-        }
+        // debug_print("%s", "================= L2 WAYS - After =================");
+        // foreach_way(i, L2_CACHE_WAYS) {
+        //     PRINT_CACHE_LINE(stderr, l2_cache_entry_t, L2_CACHE_WAYS, l2_cache_line_index, i, 4);
+        // }
     }
 
     *insert_way = l1_insert_way;
