@@ -73,6 +73,9 @@ static inline void move_to_l2_from_l1(void* dest_l2_cache, void* src_l1_cache, u
 static inline void move_to_l1_from_l2(void* dest_l1_cache, void* src_l2_cache, uint32_t src_l2_tag, uint16_t src_l2_line,
         uint8_t src_l2_way, uint32_t dest_l1_tag, uint16_t dest_l1_line, uint8_t dest_l1_way);
 
+static inline void replace_l1_with_l2(void* dest_l1_cache, void* src_l2_cache, uint32_t src_l2_tag, uint32_t src_l2_line,
+        uint8_t src_l2_way, cache_replace_t replace, void* replaced_entry, cache_t replaced_type);
+
 static inline int find_empty_way(void * cache, cache_t cache_type, uint16_t cache_line_index);
 
 static inline uint8_t find_oldest_way(void* cache, cache_t cache_type, uint16_t cache_line);
