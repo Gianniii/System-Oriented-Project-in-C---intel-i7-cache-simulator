@@ -593,6 +593,20 @@ int cache_write_byte(void * mem_space,
                      void * l2_cache,
                      uint8_t p_byte,
                      cache_replace_t replace) {
+    
+    M_REQUIRE_NON_NULL(mem_space);
+    M_REQUIRE_NON_NULL(paddr);
+    M_REQUIRE_NON_NULL(l1_cache);
+    M_REQUIRE_NON_NULL(l2_cache);
+    M_REQUIRE(replace == LRU, ERR_BAD_PARAMETER, "%s", "Non existing replacement policy");
+
+    phy_addr_t w_paddr = *paddr;
+    w_paddr.page_offset = (paddr->page_offset - (paddr->page_offset % sizeof(word_t)));
+    word_t word;
+    cache_read(mem_space, paddr, DATA, l1_cache, l2_cache, &word, replace);
+    word |= (p_byte >> (w_paddr.page_offset % sizeof(word_t)));
+    // cache_write(mem_space, &w_paddr, l1_cache, l2_cache, &word, replace)
+    
     return ERR_NONE;
 }               
 
