@@ -527,7 +527,31 @@ int cache_write(void * mem_space,
     M_REQUIRE_NON_NULL(mem_space);
     M_REQUIRE_NON_NULL(paddr);
     M_REQUIRE_NON_NULL(l1_cache);
-    M_REQUIRE_NON_NULL(l2_cache);    
+    M_REQUIRE_NON_NULL(l2_cache);
+
+    uint8_t hit_way;
+    uint16_t hit_index;
+    uint32_t* p_line;
+    uint32_t phy_addr = get_addr(paddr);
+    M_REQUIRE(phy_addr % L1_ICACHE_WORDS_PER_LINE == 0, ERR_BAD_PARAMETER, "%s", "paddr is not aligned");
+    
+    // === Searching L1_DCACHE ===
+    M_EXIT_ERR_NOMSG(cache_hit(mem_space, l1_cache, paddr, (const uint32_t**) &p_line, &hit_way, &hit_index, L1_DCACHE));
+    if (hit_way != HIT_WAY_MISS) {
+        uint8_t word_index = extract_word_select(phy_addr);
+        p_line[word_index] = *word;
+        recompute_ages(l1_cache, L1_DCACHE, hit_index, hit_way, 0, replace);
+        write_though(mem_space, phy_addr, p_line);
+    }
+    // ==========Check L2_CACHE========
+    M_EXIT_ERR_NOMSG(CACHE_HIT(mem_space, l2_cache, paddr, (const uint32_t**) &p_line, &hit_way, &hit_index, L2_CACHE));
+    if(hit_way  != HIT_WAY_MISS) {
+        uint8_t word_index = extract_word_select(phy_addr);
+        p_line[word_index] = *word;
+
+    } 
+
+
 
     return ERR_NONE;
 }
