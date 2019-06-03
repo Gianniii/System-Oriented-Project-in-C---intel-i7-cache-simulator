@@ -575,26 +575,26 @@ int cache_write(void * mem_space,
         memcpy(DEST_ENTRY->line, SRC_ENTRY->line, sizeof(word_t) * L1_DCACHE_WORDS_PER_LINE); \
     } while(0)
 
-static inline move_to_l2_from_l1(void* dest_l2_cache, void* src_l1_cache, uint32_t src_l1_tag, uint16_t src_l1_line, uint8_t src_l1_way, uint8_t dest_l1_way) {
+static inline move_to_l2_from_l1(void* dest_l2_cache, void* src_l1_cache, uint32_t src_l1_tag, uint16_t src_l1_line, uint8_t src_l1_way, uint8_t dest_l2_way) {
     uint32_t dest_l2_tag; uint16_t dest_l2_line;
-    L1_LINETAG_TO_L2_LINETAG(src_l1_line, src_l1_tag, dest_l2_tag, dest_l2_line);
+    L1_LINETAG_TO_L2_LINETAG(src_l1_tag, src_l1_line, dest_l2_tag, dest_l2_line);
 
     void* cache = src_l1_cache;
     l1_icache_entry_t* src_l1_entry = cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, src_l1_line, src_l1_way);
     cache = dest_l2_cache;
-    l2_cache_entry_t* dest_l2_entry = cache_entry(l2_cache_entry_t, L2_CACHE_WAYS, dest_l2_line, dest_l1_way);
+    l2_cache_entry_t* dest_l2_entry = cache_entry(l2_cache_entry_t, L2_CACHE_WAYS, dest_l2_line, dest_l2_way);
     TRANSFER_ENTRY_INFO(dest_l2_entry, src_l1_entry, dest_l2_tag);
 }
 
-static inline move_to_l1_from_l2(void* dest_l2_cache, void* src_l1_cache, uint32_t src_l1_tag, uint16_t src_l1_line, uint8_t src_l1_way, uint8_t dest_l1_way) {
-    uint32_t dest_l2_tag; uint16_t dest_l2_line;
-    L1_LINETAG_TO_L2_LINETAG(src_l1_line, src_l1_tag, dest_l2_tag, dest_l2_line);
+static inline move_to_l1_from_l2(void* dest_l1_cache, void* src_l2_cache, uint32_t src_l2_tag, uint16_t src_l2_line, uint8_t src_l2_way, uint8_t dest_l1_way) {
+    uint32_t dest_l1_tag; uint16_t dest_l1_line;
+    L1_LINETAG_TO_L2_LINETAG(src_l2_tag, src_l2_line, dest_l1_tag, dest_l1_line);
 
-    void* cache = src_l1_cache;
-    l1_icache_entry_t* src_l1_entry = cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, src_l1_line, src_l1_way);
-    cache = dest_l2_cache;
-    l2_cache_entry_t* dest_l2_entry = cache_entry(l2_cache_entry_t, L2_CACHE_WAYS, dest_l2_line, dest_l1_way);
-    TRANSFER_ENTRY_INFO(dest_l2_entry, src_l1_entry, dest_l2_tag);
+    void* cache = src_l2_cache;
+    l1_icache_entry_t* src_l2_entry = cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, src_l2_line, src_l2_way);
+    cache = dest_l1_cache;
+    l2_cache_entry_t* dest_l1_entry = cache_entry(l2_cache_entry_t, L2_CACHE_WAYS, dest_l1_line, dest_l1_way);
+    TRANSFER_ENTRY_INFO(dest_l1_entry, src_l2_entry, dest_l1_tag);
 }
 
 // static inline void write_though(void* mem_space, uint32_t phy_addr, const uint32_t* p_line) {
