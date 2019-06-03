@@ -282,8 +282,6 @@ int cache_hit (const void * mem_space,
     uint32_t phy_addr = get_addr(paddr);
     uint32_t line_index;
     uint32_t tag;
-
-    uint8_t hit = 0;
     
      // TODO Use macro to treat all 3 types
     if (cache_type == L1_ICACHE) {
@@ -293,7 +291,6 @@ int cache_hit (const void * mem_space,
         foreach_way(i, L1_ICACHE_WAYS) {
             l1_icache_entry_t* cache_entry = cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, line_index, i);
             if (cache_entry->v && cache_entry->tag == tag) {
-                hit = 1;
                 *hit_way = i;
                 *hit_index = line_index;
                 *p_line = cache_entry->line;
@@ -310,7 +307,6 @@ int cache_hit (const void * mem_space,
         foreach_way(i, L1_ICACHE_WAYS) {
             l1_dcache_entry_t* cache_entry = cache_entry(l1_dcache_entry_t, L1_DCACHE_WAYS, line_index, i);
             if (cache_entry->v && cache_entry->tag == tag) {
-                hit = 1;
                 *hit_way = i;
                 *hit_index = line_index;
                 *p_line = cache_entry->line;
@@ -327,7 +323,6 @@ int cache_hit (const void * mem_space,
         foreach_way(i, L2_CACHE_WAYS) {
             l2_cache_entry_t* cache_entry = cache_entry(l2_cache_entry_t, L2_CACHE_WAYS, line_index, i);
             if (cache_entry->v && cache_entry->tag == tag) {
-                hit = 1;
                 *hit_way = i;
                 *hit_index = line_index;
                 *p_line = cache_entry->line;
@@ -446,11 +441,11 @@ int cache_read(const void * mem_space,
     }
     debug_print("%s", "=========================================");
     M_EXIT_IF_ERR_NOMSG(cache_insert(l1_cache_line_index, empty_way, &l1_new_entry, l1_cache, L1_ICACHE)); // TODO Handle error
-    debug_print("%s", "================= After Insert =================");
-    foreach_way(i, L1_ICACHE_WAYS) {
-        PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
-    }
-    debug_print("%s", "=========================================");
+    // debug_print("%s", "================= After Insert =================");
+    // foreach_way(i, L1_ICACHE_WAYS) {
+    //     PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
+    // }
+    // debug_print("%s", "=========================================");
     recompute_ages(l1_cache, L1_ICACHE, l1_cache_line_index, empty_way, cold_start, replace);
 
     debug_print("%s", "================= After =================");
@@ -459,7 +454,7 @@ int cache_read(const void * mem_space,
     }
     debug_print("%s", "=========================================");
 
-    debug_print("%d", extract_word_select(phy_addr));
+    // debug_print("%d", extract_word_select(phy_addr));
     // PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, empty_way, 4);
     *word = p_line[extract_word_select(phy_addr)];
 
@@ -556,11 +551,11 @@ static inline int find_or_make_empty_way( // TODO Handle errors
         // Make a copy of the l1_entry to evict
         void* cache = l1_cache;
         l1_icache_entry_t l1_old_entry = *(cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, l1_insert_way));
-        debug_print("Stuff %s", "");
-        debug_print("%x", l1_cache_line_index);
-        debug_print("%x", extractBits32(l1_old_entry.tag, 0, 4) << 6);
-        debug_print("%x", extractBits32(l1_old_entry.tag, 0, 4) << 6 | l1_cache_line_index);
-        l2_cache_line_index = extractBits32(l1_old_entry.tag, 0, 4) << 6 | l1_cache_line_index;
+        debug_print("*** Moving evicted entry to l2_cache ***%s", "");
+        debug_print("\tl1_cache_line_index = %x", l1_cache_line_index);
+        debug_print("\textracted_piece_of_tag = %x", extractBits32(l1_old_entry.tag, 0, 3));
+        debug_print("%x", extractBits32(l1_old_entry.tag, 0, 3) << 6 | l1_cache_line_index);
+        l2_cache_line_index = extractBits32(l1_old_entry.tag, 0, 3) << 6 | l1_cache_line_index;
         // PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, l1_insert_way, 4);
 
         int l2_insert_way = find_empty_way(l2_cache, L2_CACHE, l2_cache_line_index);
