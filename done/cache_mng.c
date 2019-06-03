@@ -45,6 +45,13 @@
 //=========================================================================
 // Helper functions
 
+/**
+ * @brief Looks for an empty way in the l1_cache. If found return the empty_way. 
+ *        Otherwise, will perform the required eviction from the l1_cache in order
+ *        to make space for the new entry and return its way.
+ * 
+ * @param bool_cold_start (modified) was this a cold start? 
+ */
 static inline int find_or_make_empty_way(
         void * l1_cache, 
         cache_t l1_cache_type, 
@@ -462,16 +469,48 @@ int cache_read(const void * mem_space,
     return ERR_NONE;
 }
 
-// #define M_CHECK_AGES
-//     foreach_way()
+static inline uint8_t find_oldest_way(void* cache, cache_t cache_type, uint16_t cache_line) {
+    if (cache_type == L1_ICACHE || cache_type == L1_DCACHE) {
+        uint8_t allInvalid = 1; // debuging thing
 
-/**
- * @brief Looks for an empty way in the l1_cache. If found return the empty_way. 
- *        Otherwise, will perform the required eviction from the l1_cache in order
- *        to make space for the new entry and return its way.
- * 
- * @param bool_cold_start (modified) was this a cold start? 
- */
+        uint8_t way_max = 128;
+        uint8_t max = 0;
+        // debug_print("%s", "--- Searching L1 Cache ---");
+        foreach_way(i, L1_ICACHE_WAYS) {
+            allInvalid = 0; // debuging thing
+            uint8_t age = cache_age(l1_icache_entry_t, L1_ICACHE_WAYS, cache_line, i);
+            // PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
+            if (max < age) {
+                max = age;
+                way_max = i;
+            }
+        }
+        if (allInvalid) { // debuging thing
+            fprintf(stderr, "GIVEN line with all invalid ways\n");
+            return -1;
+        }
+        return way_max;
+    } else {
+        uint8_t allInvalid = 1; // debuging thing
+
+        uint8_t way_max = 128;
+        uint8_t max = 0;
+        foreach_way(i, L2_CACHE_WAYS) {
+            allInvalid = 0; // debuging thing
+            uint8_t age = cache_age(l2_cache_entry_t, L2_CACHE_WAYS, cache_line, i);
+            if (max < age) {
+                max = age;
+                way_max = i;
+            }
+        }
+        if (allInvalid) { // debuging thing
+            fprintf(stderr, "GIVEN line with all invalid ways\n");
+            return -1;
+        }
+        return way_max;
+    }
+}
+
 static inline int find_or_make_empty_way( // TODO Handle errors
         void * l1_cache, 
         cache_t l1_cache_type, 
@@ -489,26 +528,13 @@ static inline int find_or_make_empty_way( // TODO Handle errors
 
     if (!l1_cold_start) { // No "cold start". Eviction!
         // *** Find oldest entry in l1_cache. It will be evicted ***
-        void * cache = l1_cache;
-        {
-            uint8_t way_max = 128;
-            uint8_t max = 0;
-            debug_print("%s", "--- Searching L1 Cache ---");
-            foreach_way(i, L1_ICACHE_WAYS) {
-                uint8_t age = cache_age(l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i);
-                // PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
-                if (max < age) {
-                    max = age;
-                    way_max = i;
-                }
-            }
-            l1_insert_way = way_max;
-        }
+        l1_insert_way = find_oldest_way(l1_cache, L1_ICACHE, l1_cache_line_index);
         // ******
 
         // *** Moving evicted entry to l2_cache ***
         
         // Make a copy of the l1_entry to evict
+        void* cache = l1_cache;
         l1_icache_entry_t l1_old_entry = *(cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, l1_insert_way));
         debug_print("Stuff %s", "");
         debug_print("%x", l1_cache_line_index);
@@ -520,19 +546,8 @@ static inline int find_or_make_empty_way( // TODO Handle errors
         int l2_insert_way = find_empty_way(l2_cache, L2_CACHE, l2_cache_line_index);
         uint8_t l2_cold_start = (l2_insert_way != -1);
 
-        cache = l2_cache;
-
         if (!l2_cold_start) {
-            uint8_t way_max = 128;
-            uint8_t max = 0;
-            foreach_way(i, L2_CACHE_WAYS) {
-            uint8_t age = cache_age(l2_cache_entry_t, L2_CACHE_WAYS, l2_cache_line_index, i);
-                if (max < age) {
-                    max = age;
-                    way_max = i;
-                }
-            }
-            l2_insert_way = way_max;
+            l2_insert_way = find_oldest_way(l2_cache, L2_CACHE, l2_cache_line_index);
         }
 
         // debug_print("%s", "================= L2 WAYS - Before =================");
@@ -540,6 +555,8 @@ static inline int find_or_make_empty_way( // TODO Handle errors
         //     PRINT_CACHE_LINE(stderr, l2_cache_entry_t, L2_CACHE_WAYS, l2_cache_line_index, i, 4);
         // }
         // === Creating new l2_entry from evicted l1_entry ===
+
+        cache = l2_cache;
         l2_cache_entry_t l2_new_entry;
         l2_new_entry.v = 1;
         l2_new_entry.tag = l1_old_entry.tag >> (L1_ICACHE_TAG_BITS - L2_CACHE_TAG_BITS);
@@ -596,11 +613,11 @@ int cache_read_byte(const void * mem_space,
     M_REQUIRE(replace == LRU, ERR_BAD_PARAMETER, "%s", "Non existing replacement policy");
 
     phy_addr_t paddr = *p_paddr;
-    paddr.page_offset = (p_paddr->page_offset - (p_paddr->page_offset % L1_ICACHE_WORDS_PER_LINE));
+    paddr.page_offset = (p_paddr->page_offset - (p_paddr->page_offset % sizeof(word_t)));
     word_t word;
     cache_read(mem_space, &paddr, access, l1_cache, l2_cache, &word, replace);
 
-    *p_byte = ((byte_t*)(&word))[p_paddr->page_offset % L1_ICACHE_WORDS_PER_LINE];
+    *p_byte = ((byte_t*)(&word))[p_paddr->page_offset % sizeof(word_t)];
 
     return ERR_NONE;
 }
