@@ -57,10 +57,16 @@
 
 #define TRANSFER_ENTRY_INFO(DEST_ENTRY, SRC_ENTRY, DEST_TAG) \
     do { \
-        DEST_ENTRY->v = 1; \
-        DEST_ENTRY->tag = DEST_TAG; \
-        memcpy(DEST_ENTRY->line, SRC_ENTRY->line, sizeof(word_t) * L1_DCACHE_WORDS_PER_LINE); \
+        (DEST_ENTRY)->v = 1; \
+        (DEST_ENTRY)->tag = (DEST_TAG); \
+        memcpy((DEST_ENTRY)->line, (SRC_ENTRY)->line, sizeof(word_t) * L1_DCACHE_WORDS_PER_LINE); \
     } while(0)
+
+#define my_cache_cast(CACHE, M_CACHE_TYPE) ((M_CACHE_ENTRY_T(M_CACHE_TYPE) *) CACHE)
+
+// --------------------------------------------------
+#define my_cache_entry(CACHE, M_CACHE_TYPE, LINE_INDEX, WAY) \
+        (my_cache_cast(CACHE, M_CACHE_TYPE) + (LINE_INDEX) * (M_CACHE_TYPE ## _WAYS) + (WAY))
 
 //=========================================================================
 // Helper functions
@@ -72,6 +78,18 @@ static inline void move_to_l2_from_l1(void* dest_l2_cache, void* src_l1_cache, u
 
 static inline void move_to_l1_from_l2(void* dest_l1_cache, void* src_l2_cache, uint32_t src_l2_tag, uint16_t src_l2_line,
         uint8_t src_l2_way, uint32_t dest_l1_tag, uint16_t dest_l1_line, uint8_t dest_l1_way);
+
+// static inline void move_to_l2_from_l1_ptr(void* dest_l2_cache, uint32_t dest_l2_tag, uint16_t dest_l2_line, uint8_t dest_l2_way, l1_icache_entry_t* src_l1_entry) {
+//     void* cache = dest_l2_cache;
+//     l2_cache_entry_t* dest_l2_entry = cache_entry(l2_cache_entry_t, L2_CACHE_WAYS, dest_l2_line, dest_l2_way);
+//     TRANSFER_ENTRY_INFO(dest_l2_entry, src_l1_entry, dest_l2_tag);
+// }
+
+// static inline void move_to_l1_from_l2_ptr(void* dest_l1_cache, uint32_t dest_l1_tag, uint16_t dest_l1_line, uint8_t dest_l1_way, l2_cache_entry_t* src_l2_entry) {
+//     void* cache = dest_l1_cache;
+//     l2_cache_entry_t* dest_l1_entry = cache_entry(l2_cache_entry_t, L2_CACHE_WAYS, dest_l1_line, dest_l1_way);
+//     TRANSFER_ENTRY_INFO(dest_l1_entry, src_l2_entry, dest_l1_tag);
+// }
 
 static inline void replace_l1_with_l2(void* dest_l1_cache, void* src_l2_cache, uint32_t src_l2_tag, uint32_t src_l2_line,
         uint8_t src_l2_way, cache_replace_t replace, void* replaced_entry, cache_t replaced_type);
@@ -462,6 +480,9 @@ int cache_read(const void * mem_space,
 
             void * cache = l2_cache;
             cache_valid(l2_cache_entry_t, L2_CACHE_WAYS, hit_index, hit_way) = 0;
+
+            *word = p_line[extract_word_select(phy_addr)];
+            return ERR_NONE;
             // ***
         } else {} //TODO DATA
     }
@@ -545,6 +566,49 @@ int cache_read_byte(const void * mem_space,
     return ERR_NONE;
 }
 
+static inline int handle_l2_to_l1(void* l1_cache, void* l2_cache, uint16_t src_l2_line, uint8_t src_l2_way, cache_replace_t replace) {
+    l1_icache_entry_t new_l1_entry;
+    void* cache = l2_cache;
+    l2_cache_entry_t* old_l2_entry = my_cache_entry(l2_cache, L2_CACHE, src_l2_line, src_l2_way);
+
+    uint32_t dest_l1_tag; uint16_t dest_l1_line;
+    L2_LINETAG_TO_L1_LINETAG(old_l2_entry->tag, src_l2_line, dest_l1_tag, dest_l1_line);  
+    TRANSFER_ENTRY_INFO(&new_l1_entry, old_l2_entry, dest_l1_tag);
+
+    old_l2_entry->v = 0; // Invalidate l2_entry
+    int l1_empty_way = find_empty_way(l1_cache, L1_ICACHE, dest_l1_line);
+    uint8_t l1_cold_start = (l1_empty_way != -1);
+
+    if (l1_cold_start) {
+        l1_icache_entry_t* l1_empty_entry = my_cache_entry(l1_cache, L1_ICACHE, dest_l1_line, l1_empty_way);
+        TRANSFER_ENTRY_INFO(l1_empty_entry, &new_l1_entry, dest_l1_tag);
+        recompute_ages(l1_cache, L1_ICACHE, dest_l1_line, l1_empty_way, l1_cold_start, replace);
+    } else {
+        uint8_t l1_oldest_way = find_oldest_way(l1_cache, L1_ICACHE, dest_l1_line);
+        l1_icache_entry_t* old_l1_entry_ptr = my_cache_entry(l1_cache, L1_ICACHE, dest_l1_line, l1_oldest_way);
+        l1_icache_entry_t old_l1_entry = *old_l1_entry_ptr;
+
+        TRANSFER_ENTRY_INFO(old_l1_entry_ptr, &new_l1_entry, dest_l1_tag);
+        recompute_ages(l1_cache, L1_ICACHE, dest_l1_line, l1_oldest_way, l1_cold_start, replace);
+
+        // =========== look for space in l2 cache =============
+        uint32_t dest_l2_tag; uint16_t dest_l2_line; // Fining index for l2_cache
+        L1_LINETAG_TO_L2_LINETAG(old_l1_entry.tag, dest_l1_line, dest_l2_tag, dest_l2_line);
+
+        int l2_empty_way = find_empty_way(l2_cache, L2_CACHE, dest_l2_line);
+        uint8_t l2_cold_start = (l2_empty_way != -1);
+        if (l2_cold_start) {
+            l2_cache_entry_t* empty_l2_entry = my_cache_entry(l2_cache, L2_CACHE, dest_l2_line, l2_empty_way);
+            TRANSFER_ENTRY_INFO(empty_l2_entry, &old_l1_entry, dest_l2_tag);
+            recompute_ages(l2_cache, L2_CACHE, dest_l2_line, l2_empty_way, l2_cold_start, replace);
+        } else {
+            uint8_t l2_oldest_way = find_oldest_way(l2_cache, L2_CACHE, dest_l2_line);
+            l2_cache_entry_t* oldest_l2_entry = my_cache_entry(l2_cache, L2_CACHE, dest_l2_line, l2_oldest_way);
+            TRANSFER_ENTRY_INFO(oldest_l2_entry, &old_l1_entry, dest_l2_tag);
+            recompute_ages(l2_cache, L2_CACHE, dest_l2_line, l2_oldest_way, l2_cold_start, replace);
+        }
+    }
+}
 
 /**
  * @brief Change a word of data in the cache.
@@ -615,34 +679,10 @@ static inline void move_to_l1_from_l2(void* dest_l1_cache, void* src_l2_cache, u
     TRANSFER_ENTRY_INFO(dest_l1_entry, src_l2_entry, dest_l1_tag);
 }
 
-static inline void replace_l1_with_l2(void* dest_l1_cache, void* src_l2_cache, uint32_t src_l2_tag, uint32_t src_l2_line,
-        uint8_t src_l2_way, cache_replace_t replace, void* replaced_entry, cache_t replaced_type) {
-    if (replaced_type == L1_ICACHE || replaced_type == L1_DCACHE) {
-        l1_icache_entry_t* replaced_entry_cast = (l1_icache_entry_t*) replaced_entry;
-        uint32_t dest_l1_tag; uint16_t dest_l1_line;
-        L1_LINETAG_TO_L2_LINETAG(src_l2_tag, src_l2_line, dest_l1_tag, dest_l1_line);
-
-        int dest_l1_way = find_empty_way(dest_l1_cache, L1_ICACHE, dest_l1_line);
-        uint8_t cold_start = (dest_l1_way != -1);
-        if (!cold_start) {
-            dest_l1_way = find_oldest_way(dest_l1_cache, L1_ICACHE, dest_l1_line);
-            void* cache = dest_l1_cache;
-            *replaced_entry_cast = *(cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, dest_l1_line, dest_l1_way));
-        } else {
-            replaced_entry_cast = NULL;
-        }
-        move_to_l1_from_l2(dest_l1_cache, src_l2_cache, src_l2_tag, src_l2_line, src_l2_way, dest_l1_tag, dest_l1_line, dest_l1_way);
-        recompute_ages(dest_l1_cache, L1_ICACHE, dest_l1_line, dest_l1_way, cold_start, replace);
-    } else {
-        // M_EXIT_ERR_NOMSG(ERR_BAD_PARAMETER);
-    }
+static inline void write_though(void* mem_space, uint32_t phy_addr, const uint32_t* p_line) {
+    word_t* start = find_line_in_mem(mem_space, phy_addr);
+    memcpy(start, p_line, sizeof(word_t) * L1_ICACHE_WORDS_PER_LINE);
 }
-
-// static inline void write_though(void* mem_space, uint32_t phy_addr, const uint32_t* p_line) {
-//     word_t* start = find_line_in_mem(mem_space, phy_addr);
-//     memcpy(start, p_line, sizeof(word_t) * L1_ICACHE_WORDS_PER_LINE);
-// }
-
 
 /**
  * @brief Write to cache a byte of data. Endianess: LITTLE.
