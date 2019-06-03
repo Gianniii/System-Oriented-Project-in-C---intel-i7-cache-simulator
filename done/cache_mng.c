@@ -45,6 +45,8 @@
 //=========================================================================
 // Helper functions
 
+static inline int recompute_ages(void* cache, cache_t cache_type, uint16_t cache_line, uint8_t way_index, uint8_t bool_cold_start, cache_replace_t replace);
+
 /**
  * @brief Looks for an empty way in the l1_cache. If found return the empty_way. 
  *        Otherwise, will perform the required eviction from the l1_cache in order
@@ -275,6 +277,8 @@ int cache_hit (const void * mem_space,
     M_REQUIRE(cache_type == L1_ICACHE || cache_type == L1_DCACHE || cache_type == L2_CACHE,
               ERR_BAD_PARAMETER, "%s", "tlb has non existing type");
 
+    cache_replace_t replace = LRU; // Since no argument was specified!
+
     uint32_t phy_addr = get_addr(paddr);
     uint32_t line_index;
     uint32_t tag;
@@ -293,8 +297,8 @@ int cache_hit (const void * mem_space,
                 *hit_way = i;
                 *hit_index = line_index;
                 *p_line = cache_entry->line;
-                
-                LRU_age_update(l1_icache_entry_t, L1_ICACHE_WAYS, i, line_index) // TODO check me
+
+                recompute_ages(cache, L1_ICACHE, line_index, i, 0, replace);
 
                 return ERR_NONE; // break;
             }
@@ -311,7 +315,7 @@ int cache_hit (const void * mem_space,
                 *hit_index = line_index;
                 *p_line = cache_entry->line;
                 
-                LRU_age_update(l1_icache_entry_t, L1_DCACHE_WAYS, i, line_index) // TODO check me
+                recompute_ages(cache, L1_ICACHE, line_index, i, 0, replace);
 
                 return ERR_NONE; // break;
             }
@@ -328,7 +332,7 @@ int cache_hit (const void * mem_space,
                 *hit_index = line_index;
                 *p_line = cache_entry->line;
                 
-                LRU_age_update(l2_cache_entry_t, L2_CACHE_WAYS, i, line_index) // TODO check me
+                recompute_ages(cache, L2_CACHE, line_index, i, 0, replace);
 
                 return ERR_NONE; // break;
             }
@@ -447,15 +451,8 @@ int cache_read(const void * mem_space,
     //     PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
     // }
     // debug_print("%s", "=========================================");
-    if (replace == LRU) {
-        if (cold_start) {
-            debug_print("cold_start = %d \tage_increase", cold_start);
-            LRU_age_increase(l1_icache_entry_t, L1_ICACHE_WAYS, empty_way, l1_cache_line_index);
-        } else {
-            debug_print("cold_start = %d \tage_update", cold_start);
-            LRU_age_update(l1_icache_entry_t, L1_ICACHE_WAYS, empty_way, l1_cache_line_index);
-        }
-    }
+    recompute_ages(l1_cache, L1_ICACHE, l1_cache_line_index, empty_way, cold_start, replace);
+
     // debug_print("%s", "================= After =================");
     // foreach_way(i, L1_ICACHE_WAYS) {
     //     PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
@@ -466,6 +463,29 @@ int cache_read(const void * mem_space,
     // PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, empty_way, 4);
     *word = p_line[extract_word_select(phy_addr)];
 
+    return ERR_NONE;
+}
+
+static inline int recompute_ages(void* cache, cache_t cache_type, uint16_t cache_line, uint8_t way_index, uint8_t bool_cold_start, cache_replace_t replace) {
+    if (cache_type == L1_ICACHE || cache_type == L1_DCACHE) {
+        if (replace == LRU) {
+            if (bool_cold_start) {
+                debug_print("cold_start = %d \tage_increase", bool_cold_start);
+                LRU_age_increase(l1_icache_entry_t, L1_ICACHE_WAYS, way_index, cache_line);
+            } else {
+                debug_print("cold_start = %d \tage_update", bool_cold_start);
+                LRU_age_update(l1_icache_entry_t, L1_ICACHE_WAYS, way_index, cache_line);
+            }
+        }
+    } else {
+        if (replace == LRU) {
+            if (bool_cold_start) {
+                LRU_age_increase(l2_cache_entry_t, L2_CACHE_WAYS, way_index, cache_line);    
+            } else {
+                LRU_age_update(l2_cache_entry_t, L2_CACHE_WAYS, way_index, cache_line);
+            }
+        }
+    }
     return ERR_NONE;
 }
 
@@ -565,13 +585,7 @@ static inline int find_or_make_empty_way( // TODO Handle errors
         // ======
 
         cache_insert(l2_cache_line_index, l2_insert_way, &l2_new_entry, l2_cache, L2_CACHE);
-        if (replace == LRU) {
-            if (l2_cold_start) {
-                LRU_age_increase(l2_cache_entry_t, L2_CACHE_WAYS, l2_insert_way, l2_cache_line_index);    
-            } else {
-                LRU_age_update(l2_cache_entry_t, L2_CACHE_WAYS, l2_insert_way, l2_cache_line_index);
-            }
-        }
+        recompute_ages(cache, L2_CACHE, l2_cache_line_index, l2_insert_way, l2_cold_start, replace);
         // ******
 
         // debug_print("%s", "================= L2 WAYS - After =================");
