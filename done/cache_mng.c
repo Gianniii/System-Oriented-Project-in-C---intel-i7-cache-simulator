@@ -16,7 +16,7 @@
 #include <inttypes.h> // for PRIx macros
 
 //=========================================================================
-// Our macros
+// Helper functions & Macros
 
 #define L1_PHY_ADDR_BYTE_INDEX 0
 #define L1_PHY_ADDR_WORD_INDEX 2
@@ -68,48 +68,25 @@
 #define my_cache_entry(CACHE, M_CACHE_TYPE, LINE_INDEX, WAY) \
         (my_cache_cast(CACHE, M_CACHE_TYPE) + (LINE_INDEX) * (M_CACHE_TYPE ## _WAYS) + (WAY))
 
-//=========================================================================
-// Helper functions
-
 #define ZERO_4_LSBS 0xFFFFFFF0
+
+// Finds the line in memory
 static inline word_t* find_line_in_mem(const void* mem_space, uint32_t phy_addr) {
     uint32_t alligned_phy_addr = phy_addr & ZERO_4_LSBS;
     return (word_t*) mem_space + alligned_phy_addr/sizeof(word_t);
 }
 #undef ZERO_4_LSBS
 
+// Applies the correct increase or update policy on given cache block
 static inline void recompute_ages(void* cache, cache_t cache_type, uint16_t cache_line, uint8_t way_index, uint8_t bool_cold_start, cache_replace_t replace);
 
-static inline void move_to_l2_from_l1(void* dest_l2_cache, void* src_l1_cache, uint32_t src_l1_tag, uint16_t src_l1_line, 
-        uint8_t src_l1_way, uint32_t dest_l2_tag, uint16_t dest_l2_line, uint8_t dest_l2_way);
-
-static inline void move_to_l1_from_l2(void* dest_l1_cache, void* src_l2_cache, uint32_t src_l2_tag, uint16_t src_l2_line,
-        uint8_t src_l2_way, uint32_t dest_l1_tag, uint16_t dest_l1_line, uint8_t dest_l1_way);
-
+// Find an empty way of a cache line
 static inline int find_empty_way(void * cache, cache_t cache_type, uint16_t cache_line_index);
 
+// Finds the oldest way of a cache line
 static inline uint8_t find_oldest_way(void* cache, cache_t cache_type, uint16_t cache_line);
 
-/**
- * @brief Looks for an empty way in the l1_cache. If found return the empty_way. 
- *        Otherwise, will perform the required eviction from the l1_cache in order
- *        to make space for the new entry and return its way.
- * 
- * @param bool_cold_start (modified) was this a cold start? 
- */
-static inline int find_or_make_empty_way(
-        void * l1_cache, 
-        cache_t l1_cache_type, 
-        void * l2_cache, 
-        uint32_t l1_entry_tag,
-        uint16_t l1_cache_line_index,
-        cache_replace_t replace,
-        uint8_t* bool_cold_start,
-        uint8_t* insert_way);
-
-/**
- * @brief TODO
- */
+// Turns the phy_addr_t to and more useful uint32
 static inline uint32_t get_addr(const phy_addr_t * paddr) {
     return (paddr->phy_page_num << PAGE_OFFSET) | (paddr->page_offset);
 }
@@ -123,14 +100,7 @@ static inline uint32_t get_addr(const phy_addr_t * paddr) {
  * 
  * @return the index of the 1st empty way that was found. Otherwise, returns -1 
  */
-static inline int find_empty_way(void * cache, cache_t cache_type, uint16_t cache_line_index) {
-    // TODO Remove this later. I left it to better understand the macro
-    // foreach_way(i, L1_ICACHE_WAYS) {
-    //     if (!cache_valid(M_CACHE_ENTRY_T(L1_ICACHE), L1_ICACHE_WAYS, cache_line_index, i)) {
-    //         return i;
-    //     }
-    // }
-    
+static inline int find_empty_way(void * cache, cache_t cache_type, uint16_t cache_line_index) {    
     #define M_FIND_EMPTY_WAY(m_cache_type) \
         foreach_way(i, m_cache_type ## _WAYS) { \
             if (!cache_valid(M_CACHE_ENTRY_T(m_cache_type), m_cache_type ## _WAYS, cache_line_index, i)) { \
@@ -156,10 +126,12 @@ static inline uint32_t extractBits32(uint32_t sample, const uint8_t start, const
     return (sample << (32 - stop)) >> (32 - stop + start);
 }
 
+// Gets the byte_select from a phy_addr (same for l1 and l2)
 static inline uint8_t extract_byte_select(uint32_t phy_addr) {
     return extractBits32(phy_addr, L1_PHY_ADDR_BYTE_INDEX, L1_PHY_ADDR_WORD_INDEX);
 }
 
+// Gets the word_select from a phy_addr (same for l1 and l2)
 static inline uint8_t extract_word_select(uint32_t phy_addr) {
     return extractBits32(phy_addr, L1_PHY_ADDR_WORD_INDEX, L1_PHY_ADDR_LINE_INDEX);
 }
@@ -168,15 +140,21 @@ static inline uint16_t extract_l1_line_select(uint32_t phy_addr) {
     return extractBits32(phy_addr, L1_PHY_ADDR_LINE_INDEX, L1_PHY_ADDR_TAG_INDEX);
 }
 
+#define L2_LINE_INDEX_START 4
+#define L2_LINE_INDEX_END 13
+
 static inline uint16_t extract_l2_line_select(uint32_t phy_addr) {
-    return extractBits32(phy_addr, 4, 13); // TODO no magic
+    return extractBits32(phy_addr, L2_LINE_INDEX_START, L2_LINE_INDEX_END);
 }
+
+#undef L2_LINE_INDEX_START
+#undef L2_LINE_INDEX_END
 
 #define extract_tag(phy_addr, m_cache_type) (phy_addr >> m_cache_type ## _TAG_REMAINING_BITS)
 
+// Performs everything to correctly move a cache_entry from l2 to l1
 static inline void handle_l2_to_l1(void* l1_cache, void* l2_cache, uint16_t src_l2_line, uint8_t src_l2_way, cache_replace_t replace) {
     l1_icache_entry_t new_l1_entry;
-    void* cache = l2_cache;
     l2_cache_entry_t* old_l2_entry = my_cache_entry(l2_cache, L2_CACHE, src_l2_line, src_l2_way);
 
     uint32_t dest_l1_tag; uint16_t dest_l1_line;
@@ -220,6 +198,7 @@ static inline void handle_l2_to_l1(void* l1_cache, void* l2_cache, uint16_t src_
     }
 }
 
+// Performs everything to correctly set a l1_cache_entry from a given src_entry (an initialised struct containing the wanted info)
 static inline void handle_mem_to_l1(void* l1_cache, void* l2_cache, uint16_t dest_l1_line, l1_dcache_entry_t* src_entry, cache_replace_t replace) {
     uint32_t dest_l1_tag = src_entry->tag;
 
@@ -258,6 +237,7 @@ static inline void handle_mem_to_l1(void* l1_cache, void* l2_cache, uint16_t des
     }
 }
 
+// Writes data "through the cache"
 static inline void write_though(void* mem_space, uint32_t phy_addr, const uint32_t* p_line) {
     word_t* start = find_line_in_mem(mem_space, phy_addr);
     memcpy(start, p_line, sizeof(word_t) * L1_ICACHE_WORDS_PER_LINE);
@@ -413,8 +393,7 @@ int cache_hit (const void * mem_space,
     uint32_t phy_addr = get_addr(paddr);
     uint32_t line_index;
     uint32_t tag;
-    
-     // TODO Use macro to treat all 3 types
+
     if (cache_type == L1_ICACHE) {
         line_index = (phy_addr / L1_ICACHE_LINE) % L1_ICACHE_LINES;
         tag = phy_addr >> L1_ICACHE_TAG_REMAINING_BITS;
@@ -428,7 +407,7 @@ int cache_hit (const void * mem_space,
 
                 recompute_ages(cache, L1_ICACHE, line_index, i, 0, replace);
 
-                return ERR_NONE; // break;
+                return ERR_NONE;
             }
         }
     } else if(cache_type == L1_DCACHE) {
@@ -444,7 +423,7 @@ int cache_hit (const void * mem_space,
                 
                 recompute_ages(cache, L1_ICACHE, line_index, i, 0, replace);
 
-                return ERR_NONE; // break;
+                return ERR_NONE;
             }
         }
 	} else if(cache_type == L2_CACHE) {
@@ -460,7 +439,7 @@ int cache_hit (const void * mem_space,
                 
                 recompute_ages(cache, L2_CACHE, line_index, i, 0, replace);
 
-                return ERR_NONE; // break;
+                return ERR_NONE;
             }
         }
 	}
@@ -492,37 +471,12 @@ int cache_read(const void * mem_space,
     const uint32_t* p_line;
     uint32_t phy_addr = get_addr(paddr);
     M_REQUIRE(phy_addr % L1_ICACHE_WORDS_PER_LINE == 0, ERR_BAD_PARAMETER, "%s", "paddr is not aligned");
-    
-    uint16_t l1_cache_line_index = extract_l1_line_select(phy_addr);
-    uint16_t l2_cache_line_index = extract_l2_line_select(phy_addr);
 
     debug_print("%s", "======================== cache_read() =========================");
 
-    {
-        void * cache = l1_cache;
-        l1_icache_entry_t entries[16];
-        memset(entries, 0, sizeof(l1_icache_entry_t) * 16);
-        foreach_way(i, L1_ICACHE_WAYS) {
-            entries[i] = *cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i);
-        }
-        foreach_way(i, L1_ICACHE_WAYS) {
-            if (entries[i].v) {
-                foreach_way(j, L1_ICACHE_WAYS) {
-                    if (entries[j].v && j != i && entries[i].age == entries[j].age) {
-                        debug_print("%s", "====================================================BAD!=============================================");
-                        foreach_way(i, L1_ICACHE_WAYS) {
-                            PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
-                        }
-                        M_EXIT_ERR_NOMSG(ERR_BAD_PARAMETER);
-                    }
-                }
-            }
-        }
-    }
-
     // *** Searching Level 1 Cache ***
     debug_print("%s", "Searching Level 1 Cache");
-    if (1) { // access == INSTRUCTION
+    if (access == INSTRUCTION || access == DATA) {
         M_EXIT_IF_ERR_NOMSG(cache_hit(mem_space, l1_cache, paddr, &p_line, &hit_way, &hit_index, L1_ICACHE));
         if (hit_way != HIT_WAY_MISS) {
             *word = p_line[extract_word_select(phy_addr)];
@@ -536,70 +490,25 @@ int cache_read(const void * mem_space,
     M_EXIT_IF_ERR_NOMSG(cache_hit(mem_space, l2_cache, paddr, &p_line, &hit_way, &hit_index, L2_CACHE));
     if (hit_way != HIT_WAY_MISS) {
         debug_print("%s", "L2 Hit!");
-        if (1) { // access == INSTRUCTION
-            // *** Create new l1_cache_entry ***
-            // l1_new_entry.v = 1;
-            // memcpy(l1_new_entry.line, p_line, sizeof(word_t) * L1_ICACHE_WORDS_PER_LINE);
-            // l1_new_entry.tag = extract_tag(phy_addr, L1_ICACHE);
-            // l1_new_entry.age = 0;
-
-            uint32_t src_l2_tag = extract_tag(phy_addr, L2_CACHE);
-            uint32_t dest_l1_tag; uint16_t dest_l1_line;
-            L2_LINETAG_TO_L1_LINETAG(src_l2_tag, hit_index, dest_l1_tag, dest_l1_line);
-
-            uint8_t cold_start; uint8_t empty_way;
-            M_EXIT_IF_ERR_NOMSG(find_or_make_empty_way(l1_cache, L1_ICACHE, l2_cache, dest_l1_tag, l1_cache_line_index, replace, &cold_start, &empty_way));
-            move_to_l1_from_l2(l1_cache, l2_cache, extract_tag(phy_addr, L2_CACHE), hit_index, hit_way, dest_l1_tag, dest_l1_line, empty_way);
-            recompute_ages(l1_cache, L1_ICACHE, dest_l1_line, empty_way, cold_start, replace);
-
-            void * cache = l2_cache;
-            cache_valid(l2_cache_entry_t, L2_CACHE_WAYS, hit_index, hit_way) = 0;
-
+        if (access == INSTRUCTION || access == DATA) {
             *word = p_line[extract_word_select(phy_addr)];
+            handle_l2_to_l1(l1_cache, l2_cache, hit_index, hit_way, replace);
+
             return ERR_NONE;
-            // ***
-        } else {} //TODO DATA
+        }
     }
 
     // *** L2 Miss - Searching Memory
     debug_print("%s", "L2 Miss - Searching Memory");
     l1_icache_entry_t l1_new_entry;
-    M_EXIT_IF_ERR_NOMSG(cache_entry_init(mem_space, paddr, &l1_new_entry, L1_ICACHE)); // TODO Handle error
+    M_EXIT_IF_ERR_NOMSG(cache_entry_init(mem_space, paddr, &l1_new_entry, L1_ICACHE));
     p_line = l1_new_entry.line;
 
     // Inserting new_entry
     debug_print("%s", "Inserting new_entry");
-    uint8_t cold_start;
-    uint8_t empty_way;
-    M_EXIT_IF_ERR_NOMSG(find_or_make_empty_way(l1_cache, L1_ICACHE, l2_cache, extract_tag(phy_addr, L1_ICACHE), l1_cache_line_index, replace, &cold_start, &empty_way));
+    handle_mem_to_l1(l1_cache, l2_cache, extract_l1_line_select(phy_addr), &l1_new_entry, replace);
 
-    debug_print("%s %d", "empty way: ", empty_way);
-    void * cache = l1_cache;
-    l1_new_entry.age = cache_age(l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, empty_way);
-
-    // debug_print("%s", "================= Before =================");
-    // foreach_way(i, L1_ICACHE_WAYS) {
-    //     PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
-    // }
-    // debug_print("%s", "=========================================");
-    M_EXIT_IF_ERR_NOMSG(cache_insert(l1_cache_line_index, empty_way, &l1_new_entry, l1_cache, L1_ICACHE)); // TODO Handle error
-    // debug_print("%s", "================= After Insert =================");
-    // foreach_way(i, L1_ICACHE_WAYS) {
-    //     PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
-    // }
-    // debug_print("%s", "=========================================");
-    recompute_ages(l1_cache, L1_ICACHE, l1_cache_line_index, empty_way, cold_start, replace);
-
-    // debug_print("%s", "================= After =================");
-    // foreach_way(i, L1_ICACHE_WAYS) {
-    //     PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
-    // }
-    // debug_print("%s", "=========================================");
-
-    // debug_print("%d", extract_word_select(phy_addr));
-    // PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, empty_way, 4);
     *word = p_line[extract_word_select(phy_addr)];
-
     return ERR_NONE;
 }
 
@@ -678,35 +587,6 @@ int cache_write(void * mem_space,
     return ERR_NONE;
 }
 
-static inline void move_to_l2_from_l1(void* dest_l2_cache, void* src_l1_cache, uint32_t src_l1_tag, uint16_t src_l1_line, 
-        uint8_t src_l1_way, uint32_t dest_l2_tag, uint16_t dest_l2_line, uint8_t dest_l2_way) {
-    void* cache = src_l1_cache;
-    l1_icache_entry_t* src_l1_entry = cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, src_l1_line, src_l1_way);
-    cache = dest_l2_cache;
-    l2_cache_entry_t* dest_l2_entry = cache_entry(l2_cache_entry_t, L2_CACHE_WAYS, dest_l2_line, dest_l2_way);
-    TRANSFER_ENTRY_INFO(dest_l2_entry, src_l1_entry, dest_l2_tag);
-}
-
-static inline void move_to_l1_from_l2(void* dest_l1_cache, void* src_l2_cache, uint32_t src_l2_tag, uint16_t src_l2_line,
-        uint8_t src_l2_way, uint32_t dest_l1_tag, uint16_t dest_l1_line, uint8_t dest_l1_way) {
-    void* cache = src_l2_cache;
-    l1_icache_entry_t* src_l2_entry = cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, src_l2_line, src_l2_way);
-    cache = dest_l1_cache;
-    l2_cache_entry_t* dest_l1_entry = cache_entry(l2_cache_entry_t, L2_CACHE_WAYS, dest_l1_line, dest_l1_way);
-    TRANSFER_ENTRY_INFO(dest_l1_entry, src_l2_entry, dest_l1_tag);
-}
-
-/**
- * @brief Write to cache a byte of data. Endianess: LITTLE.
- *
- * @param mem_space pointer to the memory space
- * @param paddr pointer to a physical address
- * @param l1_cache pointer to the beginning of L1 ICACHE
- * @param l2_cache pointer to the beginning of L2 CACHE
- * @param p_byte pointer to the byte to be returned
- * @param replace replacement policy
- * @return error code
- */
 int cache_write_byte(void * mem_space,
                      phy_addr_t * paddr,
                      void * l1_cache,
@@ -740,92 +620,26 @@ static inline void recompute_ages(void* cache, cache_t cache_type, uint16_t cach
 
 static inline uint8_t find_oldest_way(void* cache, cache_t cache_type, uint16_t cache_line) {
     if (cache_type == L1_ICACHE || cache_type == L1_DCACHE) {
-        uint8_t allInvalid = 1; // debuging thing
-
         uint8_t way_max = 128;
         uint8_t max = 0;
-        // debug_print("%s", "--- Searching L1 Cache ---");
         foreach_way(i, L1_ICACHE_WAYS) {
-            allInvalid = 0; // debuging thing
             uint8_t age = cache_age(l1_icache_entry_t, L1_ICACHE_WAYS, cache_line, i);
-            // PRINT_CACHE_LINE(stderr, l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, i, 4);
             if (max < age) {
                 max = age;
                 way_max = i;
             }
         }
-        if (allInvalid) { // debuging thing
-            fprintf(stderr, "GIVEN line with all invalid ways\n");
-            return -1;
-        }
         return way_max;
     } else {
-        uint8_t allInvalid = 1; // debuging thing
-
         uint8_t way_max = 128;
         uint8_t max = 0;
         foreach_way(i, L2_CACHE_WAYS) {
-            allInvalid = 0; // debuging thing
             uint8_t age = cache_age(l2_cache_entry_t, L2_CACHE_WAYS, cache_line, i);
             if (max < age) {
                 max = age;
                 way_max = i;
             }
         }
-        if (allInvalid) { // debuging thing
-            fprintf(stderr, "GIVEN line with all invalid ways\n");
-            return -1;
-        }
         return way_max;
     }
-}
-
-static inline int find_or_make_empty_way( // TODO Handle errors
-        void * l1_cache, 
-        cache_t l1_cache_type, 
-        void * l2_cache,
-        uint32_t l1_entry_tag,
-        uint16_t l1_cache_line_index,
-        cache_replace_t replace,
-        uint8_t* bool_cold_start,
-        uint8_t* insert_way) {
-
-    int l1_insert_way = find_empty_way(l1_cache, L1_ICACHE, l1_cache_line_index);
-    uint8_t l1_cold_start = (l1_insert_way != -1);
-
-    if (!l1_cold_start) { // No "cold start". Eviction!
-        // *** Find oldest entry in l1_cache. It will be evicted ***
-        l1_insert_way = find_oldest_way(l1_cache, L1_ICACHE, l1_cache_line_index);
-
-        // *** Moving evicted entry to l2_cache ***
-        
-        uint32_t l2_tag; uint16_t l2_line;
-        L1_LINETAG_TO_L2_LINETAG(l1_entry_tag, l1_cache_line_index, l2_tag, l2_line);
-
-        int l2_insert_way = find_empty_way(l2_cache, L2_CACHE, l2_line);
-        uint8_t l2_cold_start = (l2_insert_way != -1);
-
-        if (!l2_cold_start) {
-            l2_insert_way = find_oldest_way(l2_cache, L2_CACHE, l2_line);
-        }
-
-        // debug_print("%s", "================= L2 WAYS - Before =================");
-        // foreach_way(i, L2_CACHE_WAYS) {
-        //     PRINT_CACHE_LINE(stderr, l2_cache_entry_t, L2_CACHE_WAYS, l2_cache_line_index, i, 4);
-        // }
-        // === Creating new l2_entry from evicted l1_entry ===
-
-        move_to_l2_from_l1(l2_cache, l1_cache, l1_entry_tag, l1_cache_line_index, l1_insert_way, l2_tag, l2_line, l2_insert_way);
-        recompute_ages(l2_cache, L2_CACHE, l2_line, l2_insert_way, l2_cold_start, replace);
-        // ******
-
-        // debug_print("%s", "================= L2 WAYS - After =================");
-        // foreach_way(i, L2_CACHE_WAYS) {
-        //     PRINT_CACHE_LINE(stderr, l2_cache_entry_t, L2_CACHE_WAYS, l2_cache_line_index, i, 4);
-        // }
-    }
-
-    *insert_way = l1_insert_way;
-    *bool_cold_start = l1_cold_start;
-    return ERR_NONE;
 }
