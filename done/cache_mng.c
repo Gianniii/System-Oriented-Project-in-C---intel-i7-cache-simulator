@@ -65,13 +65,17 @@
 //=========================================================================
 // Helper functions
 
-static inline int recompute_ages(void* cache, cache_t cache_type, uint16_t cache_line, uint8_t way_index, uint8_t bool_cold_start, cache_replace_t replace);
+static inline void recompute_ages(void* cache, cache_t cache_type, uint16_t cache_line, uint8_t way_index, uint8_t bool_cold_start, cache_replace_t replace);
 
 static inline void move_to_l2_from_l1(void* dest_l2_cache, void* src_l1_cache, uint32_t src_l1_tag, uint16_t src_l1_line, 
         uint8_t src_l1_way, uint32_t dest_l2_tag, uint16_t dest_l2_line, uint8_t dest_l2_way);
 
 static inline void move_to_l1_from_l2(void* dest_l1_cache, void* src_l2_cache, uint32_t src_l2_tag, uint16_t src_l2_line,
         uint8_t src_l2_way, uint32_t dest_l1_tag, uint16_t dest_l1_line, uint8_t dest_l1_way);
+
+static inline int find_empty_way(void * cache, cache_t cache_type, uint16_t cache_line_index);
+
+static inline uint8_t find_oldest_way(void* cache, cache_t cache_type, uint16_t cache_line);
 
 /**
  * @brief Looks for an empty way in the l1_cache. If found return the empty_way. 
@@ -608,22 +612,28 @@ static inline void move_to_l1_from_l2(void* dest_l1_cache, void* src_l2_cache, u
     TRANSFER_ENTRY_INFO(dest_l1_entry, src_l2_entry, dest_l1_tag);
 }
 
-// static inline void replace_l1_with_l2(void* dest_l1_cache, void* src_l2_cache, uint32_t src_l2_tag, uint32_t src_l2_line, cache_replace_t replace, void* replaced_entry, cache_t replaced_type) {
-//     if (replaced_type == L1_ICACHE || replaced_type == L1_DCACHE) {
-//         l1_icache_entry_t* replaced_entry_cast = (l1_icache_entry_t*) replaced_entry;
-//         uint32_t dest_l1_tag; uint16_t dest_l1_line;
-//         L1_LINETAG_TO_L2_LINETAG(src_l2_tag, src_l2_line, dest_l1_tag, dest_l1_line);
+static inline void replace_l1_with_l2(void* dest_l1_cache, void* src_l2_cache, uint32_t src_l2_tag, uint32_t src_l2_line,
+        uint8_t src_l2_way, cache_replace_t replace, void* replaced_entry, cache_t replaced_type) {
+    if (replaced_type == L1_ICACHE || replaced_type == L1_DCACHE) {
+        l1_icache_entry_t* replaced_entry_cast = (l1_icache_entry_t*) replaced_entry;
+        uint32_t dest_l1_tag; uint16_t dest_l1_line;
+        L1_LINETAG_TO_L2_LINETAG(src_l2_tag, src_l2_line, dest_l1_tag, dest_l1_line);
 
-//         int replace_way = find_empty_way(dest_l1_cache, L1_ICACHE, dest_l1_line);
-//         if (replace_way == -1) {
-//             replace_way = find_oldest_way(dest_l1_cache, L1_ICACHE, dest_l1_line);
-//             replaced_entry = *(cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, l1_cache_line_index, l1_insert_way));
-//         }
-        
-//     } else {
-//         M_EXIT_ERR_NOMSG(ERR_BAD_PARAMETER);
-//     }
-// }
+        int dest_l1_way = find_empty_way(dest_l1_cache, L1_ICACHE, dest_l1_line);
+        uint8_t cold_start = (dest_l1_way != -1);
+        if (!cold_start) {
+            dest_l1_way = find_oldest_way(dest_l1_cache, L1_ICACHE, dest_l1_line);
+            void* cache = dest_l1_cache;
+            *replaced_entry_cast = *(cache_entry(l1_icache_entry_t, L1_ICACHE_WAYS, dest_l1_line, dest_l1_way));
+        } else {
+            replaced_entry_cast = NULL;
+        }
+        move_to_l1_from_l2(dest_l1_cache, src_l2_cache, src_l2_tag, src_l2_line, src_l2_way, dest_l1_tag, dest_l1_line, dest_l1_way);
+        recompute_ages(dest_l1_cache, L1_ICACHE, dest_l1_line, dest_l1_way, cold_start, replace);
+    } else {
+        // M_EXIT_ERR_NOMSG(ERR_BAD_PARAMETER);
+    }
+}
 
 // static inline void write_though(void* mem_space, uint32_t phy_addr, const uint32_t* p_line) {
 //     word_t* start = find_line_in_mem(mem_space, phy_addr);
@@ -651,7 +661,7 @@ int cache_write_byte(void * mem_space,
     return ERR_NONE;
 }               
 
-static inline int recompute_ages(void* cache, cache_t cache_type, uint16_t cache_line, uint8_t way_index, uint8_t bool_cold_start, cache_replace_t replace) {
+static inline void recompute_ages(void* cache, cache_t cache_type, uint16_t cache_line, uint8_t way_index, uint8_t bool_cold_start, cache_replace_t replace) {
     if (cache_type == L1_ICACHE || cache_type == L1_DCACHE) {
         if (replace == LRU) {
             if (bool_cold_start) {
@@ -671,7 +681,6 @@ static inline int recompute_ages(void* cache, cache_t cache_type, uint16_t cache
             }
         }
     }
-    return ERR_NONE;
 }
 
 static inline uint8_t find_oldest_way(void* cache, cache_t cache_type, uint16_t cache_line) {
